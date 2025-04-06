@@ -1,0 +1,87 @@
+# === GENERAL ===
+*.log
+*.tmp
+*.swp
+*.bak
+*.DS_Store
+Thumbs.db
+
+# === ENTORNOS Y CONFIGURACIÓN LOCAL ===
+.env
+.env.*
+!.env.example
+*.local
+.vscode/
+.idea/
+
+# === PYTHON (scripts en Ansible o CI) ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg
+*.egg-info/
+dist/
+build/
+
+# === DOCKER ===
+**/Dockerfile~
+docker-compose.override.yml
+.docker/
+docker-compose.override.yaml
+
+# === TERRAFORM ===
+*.tfstate
+*.tfstate.*
+.terraform/
+.crash/
+*.backup
+terraform.tfvars
+terraform.tfvars.json
+
+# === ANSIBLE ===
+*.retry
+ansible.cfg~
+.inventory
+.hosts
+
+# === JENKINS ===
+*.jenkinsfile
+jenkins_home/
+*.xml
+
+# === GITHUB ACTIONS ===
+secrets.json
+gh-actions-output.log
+
+# === NGINX ===
+*.conf~
+nginx/logs/
+nginx/cache/
+
+# === GITBOOK ===
+_book/
+node_modules/
+book.json~
+SUMMARY.md~
+
+# === OTROS ===
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# === SISTEMAS OPERATIVOS ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.cache/

@@ -3,7 +3,8 @@ version: "3.8"
 services:
   core:
     build:
-      context: ../api-core-test
+      context: ${API_CORE_PATH}
+    image: core-api
     container_name: core-api
     ports:
       - "3001:3001"
@@ -12,7 +13,8 @@ services:
 
   gm:
     build:
-      context: ../api-gm-test
+      context: ${API_GM_PATH}
+    image: gm-api
     container_name: gm-api
     ports:
       - "3002:3002"
@@ -21,7 +23,8 @@ services:
 
   client:
     build:
-      context: ../client-test
+      context: ${CLIENT_PATH}
+    image: client-app
     container_name: client-app
     ports:
       - "3000:3000"
