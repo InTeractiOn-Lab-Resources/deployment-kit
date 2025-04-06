@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  core:
+    build:
+      context: ../api-core-test
+    container_name: core-api
+    ports:
+      - "3001:3001"
+    networks:
+      - app-network
+
+  gm:
+    build:
+      context: ../api-gm-test
+    container_name: gm-api
+    ports:
+      - "3002:3002"
+    networks:
+      - app-network
+
+  client:
+    build:
+      context: ../client-test
+    container_name: client-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - core
+      - gm
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
