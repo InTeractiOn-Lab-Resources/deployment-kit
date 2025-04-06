@@ -1,11 +1,12 @@
 # Deployment Kit
 
-Este repositorio contiene un conjunto de **plantillas y scripts de despliegue** creadas para agilizar el levantamiento de servicios y aplicaciones desarrolladas por el laboratorio InTeractiOn.
+Este repositorio contiene un conjunto de **plantillas y scripts de despliegue** diseñadas para levantar los servicios y aplicaciones cloud del laboratorio InTeractiOn.
 
 
 ## Objetivo
 Crear un kit de plantillas de despliegue que pueda:
-- Estandarizar el proceso de despliegue y reducir tiempos de puesta en marcha.
+- Estandarizar el proceso de despliegue del laboratorio.
+- Agilizar y reducir tiempos de puesta en marcha.
 - Adaptarse fácilmente a distintos entornos (local, cloud y máquinas virtuales).
 - Ser utilizado por otros miembros o tesistas del laboratorio InTeractiOn.
 
