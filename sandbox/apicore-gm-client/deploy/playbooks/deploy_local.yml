@@ -1,0 +1,9 @@
+---
+- name: Despliegue local de apicore-gm-client
+  hosts: local
+  become: true
+  vars:
+    project_root: "/home/thecariah/projects/infra-sandbox/deployment-kit/sandbox/apicore-gm-client"
+  roles:
+    - python
+    - docker

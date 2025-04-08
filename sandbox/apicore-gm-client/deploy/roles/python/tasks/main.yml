@@ -1,0 +1,25 @@
+---
+- name: Asegurar que Python 3 esté instalado
+  apt:
+    name: python3
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Asegurar que pip3 esté instalado
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Instalar versiones compatibles de SDK Docker y librerías HTTP
+  pip:
+    name:
+      - docker==6.1.3
+      - docker-compose==1.29.2
+      - requests==2.28.2
+      - urllib3==1.26.20
+      - requests_unixsocket
+    executable: pip3
+  become: true
