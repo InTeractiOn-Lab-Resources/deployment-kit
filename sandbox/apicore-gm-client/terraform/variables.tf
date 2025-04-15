@@ -11,12 +11,17 @@ variable "instance_type" {
   default = "t2.micro"
 }
 
+variable "inline_public_key" {
+  description = "Public SSH key inline"
+  type        = string
+}
+
 variable "public_key_path" {
-  description = "Path to your .pub key"
+  description = "Public SSH key path"
   type        = string
 }
 
 variable "private_key_path" {
-  description = "Path to your .pem key"
+  description = "Private SSH key path"
   type        = string
 }

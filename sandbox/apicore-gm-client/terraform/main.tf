@@ -4,7 +4,7 @@ provider "aws" {
 
 resource "aws_key_pair" "default" {
   key_name   = "caro-key"
-  public_key = file(var.public_key_path)
+  public_key = var.inline_public_key
 }
 
 resource "aws_instance" "sandbox" {
