@@ -15,17 +15,5 @@ resource "aws_instance" "sandbox" {
   tags = {
     Name = "sandbox-instance"
   }
-
-  provisioner "remote-exec" {
-    inline = [
-      "sudo apt update -y"
-    ]
-
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file(var.private_key_path)
-      host        = self.public_ip
-    }
-  }
 }
+
