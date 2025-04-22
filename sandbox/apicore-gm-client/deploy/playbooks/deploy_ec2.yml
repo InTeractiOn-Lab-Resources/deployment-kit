@@ -1,10 +1,13 @@
 ---
-- name: Despliegue de apicore-gm-client en instancia EC2 AWS
+- name: Despliegue de apicore-gm-client en instancia EC2 AWS con Nginx
   hosts: ec2
   become: true
   vars:
-    project_root: "/home/thecariah/projects/infra-sandbox/deployment-kit/sandbox/apicore-gm-client"
+    project_root: "/home/ubuntu/infra-sandbox"
+    compose_path: "/home/ubuntu/infra-sandbox/deployment-kit/sandbox/apicore-gm-client"
+    clone_repos: true
   roles:
     - python
     - docker
     - nginx
+    - provision

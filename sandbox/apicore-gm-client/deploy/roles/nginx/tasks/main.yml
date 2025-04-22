@@ -3,33 +3,87 @@
   apt:
     name: nginx
     state: present
-    update_cache: yes
+    update_cache: true
   become: true
 
-- name: Habilitar y arrancar Nginx
+- name: Asegurar que Nginx esté iniciado
   service:
     name: nginx
     state: started
     enabled: true
+  become: true
 
-- name: Configurar Nginx como reverse proxy para el cliente
-  copy:
-    dest: /etc/nginx/sites-available/default
-    content: |
-      server {
-          listen 80 default_server;
-          listen [::]:80 default_server;
+- name: Configurar Nginx como reverse proxy
+  block:
+    - name:  Crear archivo de Nginx para redirigir frontend y APIs
+      copy:
+        dest: /etc/nginx/sites-available/client-app.conf
+        content: |
+          server {
+              listen 80;
+              server_name _;
 
-          server_name _;
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
 
-          location / {
-              proxy_pass http://localhost:3000;
+              location /api-core/ {
+              proxy_pass http://localhost:3001/;
               proxy_http_version 1.1;
               proxy_set_header Upgrade $http_upgrade;
               proxy_set_header Connection 'upgrade';
               proxy_set_header Host $host;
               proxy_cache_bypass $http_upgrade;
+              }
+
+              location /api-gm/ {
+                  proxy_pass http://localhost:3002/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
           }
-      }
-  notify:
-    - Reload Nginx
+        owner: root
+        group: root
+        mode: '0644'
+      become: true
+
+    - name: Habilitar configuración client-app en sites-enabled
+      file:
+        src: /etc/nginx/sites-available/client-app.conf
+        dest: /etc/nginx/sites-enabled/client-app.conf
+        state: link
+      become: true
+
+    - name: Eliminar configuración default de Nginx si existe
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      become: true
+
+    - name: Verificar configuración de Nginx
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+      failed_when: nginx_test.rc != 0
+      become: true
+
+    - name: Recargar Nginx para aplicar nueva configuración
+      service:
+        name: nginx
+        state: reloaded
+      become: true
+
+- name: Asegurar que el firewall permita tráfico HTTP
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+  become: true

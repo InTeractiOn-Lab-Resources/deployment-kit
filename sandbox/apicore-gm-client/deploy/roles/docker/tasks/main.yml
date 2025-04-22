@@ -68,17 +68,3 @@
   debug:
     msg: "El usuario fue agregado al grupo docker. Reinicia sesión si es necesario."
   when: not docker_check.stat.exists
-
-# Despliegue local
-
-- name: Construir y levantar servicios definidos en docker-compose
-  community.docker.docker_compose:
-    project_src: "{{ project_root }}"
-    build: yes
-    state: present
-  become: true
-
-- name: Mostrar estado de los contenedores
-  command: docker compose ps
-  args:
-    chdir: "{{ project_root }}"

@@ -1,6 +1,6 @@
 ---
-- name: Reload Nginx
+- name: Reiniciar Nginx
   service:
     name: nginx
-    state: reloaded
-    
+    state: restarted
+  become: true

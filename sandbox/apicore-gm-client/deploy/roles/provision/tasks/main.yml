@@ -1,0 +1,78 @@
+---
+- name: Crear directorio del proyecto si no existe
+  file:
+    path: "{{ project_root }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Repositorios a clonar o actualizar
+  set_fact:
+    repos:
+      - name: api-core-test
+        url: https://github.com/infra-sandbox/api-core-test.git
+      - name: api-gm-test
+        url: https://github.com/infra-sandbox/api-gm-test.git
+      - name: client-test
+        url: https://github.com/infra-sandbox/client-test.git
+      - name: deployment-kit
+        url: https://github.com/infra-sandbox/deployment-kit.git
+  when: clone_repos | default(false)
+
+- name: Clonar o actualizar repositorios
+  block:
+
+    - name: Verificar si {{ item.name }} ya está clonado
+      stat:
+        path: "{{ project_root }}/{{ item.name }}/.git"
+      register: repo_stat
+      loop: "{{ repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Clonar {{ item.item.name }} si no existe
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: main
+      when: not item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    - name: Actualizar {{ item.item.name }} si ya existe (y forzar reset)
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: main
+        update: yes
+        force: yes
+      register: git_update
+      when: item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+- name: Crear archivo .env con rutas necesarias
+  copy:
+    dest: "{{ compose_path }}/.env"
+    content: |
+      API_CORE_PATH={{ project_root }}/api-core-test
+      API_GM_PATH={{ project_root }}/api-gm-test
+      CLIENT_PATH={{ project_root }}/client-test
+      INIT_SQL_PATH={{ project_root }}/api-gm-test/init.sql
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Reconstruir contenedores si hubo cambios en repos
+  command: docker compose up -d --build
+  args:
+    chdir: "{{ compose_path }}"
+  when: git_update.changed | default(false) or clone_repos | default(false)
+
+- name: Mostrar estado de los contenedores
+  command: docker compose ps
+  args:
+    chdir: "{{ compose_path }}"
