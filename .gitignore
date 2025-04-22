@@ -33,6 +33,7 @@ docker-compose.override.yaml
 *.tfstate
 *.tfstate.*
 .terraform/
+.terraform.*
 .crash/
 *.backup
 terraform.tfvars

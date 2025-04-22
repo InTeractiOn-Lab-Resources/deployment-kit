@@ -16,7 +16,6 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY }}
-      TF_VAR_key_pair_name: aws_key_aced_deca
 
     defaults:
       run:
@@ -36,6 +35,14 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+
+      - name: Debug public key and TF vars
+        run: |
+          echo "First 100 chars of INLINE_PUBLIC_KEY:"
+          echo "${{ secrets.INLINE_PUBLIC_KEY }}" | head -c 100
+          echo ""
+          echo "TF_VAR_ environment variables:"
+          env | grep TF_VAR_
 
       - name: Terraform Plan
         run: terraform plan
