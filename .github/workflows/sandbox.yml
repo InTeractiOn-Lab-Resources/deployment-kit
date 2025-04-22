@@ -36,14 +36,6 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Debug public key and TF vars
-        run: |
-          echo "First 100 chars of INLINE_PUBLIC_KEY:"
-          echo "${{ secrets.INLINE_PUBLIC_KEY }}" | head -c 100
-          echo ""
-          echo "TF_VAR_ environment variables:"
-          env | grep TF_VAR_
-
       - name: Terraform Plan
         run: terraform plan
 
