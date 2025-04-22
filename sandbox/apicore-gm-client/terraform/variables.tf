@@ -15,13 +15,3 @@ variable "inline_public_key" {
   description = "Public SSH key inline"
   type        = string
 }
-
-variable "public_key_path" {
-  description = "Public SSH key path"
-  type        = string
-}
-
-variable "private_key_path" {
-  description = "Private SSH key path"
-  type        = string
-}
