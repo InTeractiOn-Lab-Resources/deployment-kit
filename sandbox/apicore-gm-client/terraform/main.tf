@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_key_pair" "default" {
-  key_name   = "caro-key-${formatdate("YYYYMMDDHHMMSS", timestamp())}"
+  key_name = "caro-key-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   public_key = var.inline_public_key
 }
 
