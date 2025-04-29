@@ -5,6 +5,12 @@
     - thecariah/api-gm-test:latest
     - thecariah/client-test:latest
 
+- name: Clonar repositorio deployment-kit para obtener docker-compose.yml
+  git:
+    repo: https://github.com/infra-sandbox/deployment-kit.git
+    dest: "{{ project_root }}/deployment-kit"
+    version: main
+
 - name: Crear carpeta de Docker Compose si no existe
   file:
     path: "{{ compose_path }}"
