@@ -21,7 +21,7 @@
 
 - name: Copiar archivo init.sql al directorio del Compose
   copy:
-    src: "{{ project_root }}/deployment-kit/sandbox/apicore-gm-client/init.sql"
+    src: "{{ playbook_dir }}/../../../init.sql"
     dest: "{{ compose_path }}/init.sql"
     owner: ubuntu
     group: ubuntu
