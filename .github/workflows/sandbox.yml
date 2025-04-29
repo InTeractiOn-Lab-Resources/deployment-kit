@@ -58,6 +58,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Write SSH Private Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
       - name: Run Ansible Playbook to Configure Instance
         run: |
           cd sandbox/apicore-gm-client && \
