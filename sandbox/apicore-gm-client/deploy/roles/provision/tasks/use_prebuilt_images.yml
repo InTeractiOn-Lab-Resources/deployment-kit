@@ -11,22 +11,6 @@
     dest: "{{ project_root }}/deployment-kit"
     version: main
 
-- name: Crear carpeta de Docker Compose si no existe
-  file:
-    path: "{{ compose_path }}"
-    state: directory
-    owner: ubuntu
-    group: ubuntu
-    mode: '0755'
-
-- name: Copiar archivo init.sql al directorio del Compose
-  copy:
-    src: "{{ playbook_dir }}/../../../init.sql"
-    dest: "{{ compose_path }}/init.sql"
-    owner: ubuntu
-    group: ubuntu
-    mode: '0644'
-
 - name: Crear archivo .env con rutas necesarias
   copy:
     dest: "{{ compose_path }}/.env"
