@@ -1,6 +1,6 @@
 ---
 - name: Despliegue de apicore-gm-client en instancia EC2 AWS con Nginx
-  hosts: ec2
+  hosts: all
   become: true
   vars:
     project_root: "/home/ubuntu/infra-sandbox"
