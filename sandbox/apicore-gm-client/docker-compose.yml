@@ -2,9 +2,7 @@ version: "3.8"
 
 services:
   core:
-    build:
-      context: ${API_CORE_PATH}
-    image: core-api
+    image: ${API_CORE_IMAGE}
     container_name: core-api
     ports:
       - "3001:3001"
@@ -14,9 +12,7 @@ services:
       - app-network
 
   gm:
-    build:
-      context: ${API_GM_PATH}
-    image: gm-api
+    image: ${API_GM_IMAGE}
     container_name: gm-api
     ports:
       - "3002:3002"
@@ -26,9 +22,7 @@ services:
       - app-network
 
   client:
-    build:
-      context: ${CLIENT_PATH}
-    image: client-app
+    image: ${CLIENT_IMAGE}
     container_name: client-app
     ports:
       - "3000:3000"
@@ -59,7 +53,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ${INIT_SQL_PATH}:/docker-entrypoint-initdb.d/init.sql
+      - ${INIT_SQL_PATH}:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - app-network
 
