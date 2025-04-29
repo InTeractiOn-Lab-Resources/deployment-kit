@@ -10,13 +10,16 @@ Crear un kit de plantillas de despliegue que pueda:
 - Adaptarse fácilmente a distintos entornos (local, cloud y máquinas virtuales).
 - Ser utilizado por otros miembros o tesistas del laboratorio InTeractiOn.
 
-
 ## Estructura del repositorio
 
 - **`templates/`**: Contiene plantillas para producción o staging, listas para ser reutilizadas.
 - **`sandbox/`**: Contiene scripts de prueba para experimentar en ecosistemas controlados. Aquí se iteran configuraciones antes de ser definidas en `templates/`.
-- **`docs/`**: Documentación técnica y guía de uso.
 
+## Documentación
+
+Toda la documentación detallada de uso del Deployment Kit está disponible en el siguiente enlace:
+
+👉 [**Acceder a la documentación en GitBook**](https://infra-sandbox.gitbook.io/deployment-kit-docs)
 
 ## Tecnologías
 
