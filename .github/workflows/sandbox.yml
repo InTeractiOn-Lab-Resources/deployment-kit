@@ -60,4 +60,10 @@ jobs:
 
       - name: Run Ansible Playbook to Configure Instance
         run: |
-          ansible-playbook sandbox/apicore-gm-client/deploy/playbooks/deploy_ec2.yml -i "${{ needs.create-infrastructure.outputs.instance_ip }}," --user ubuntu --private-key "${{ secrets.SSH_PRIVATE_KEY }}" --ssh-extra-args "-o StrictHostKeyChecking=no"
+          cd sandbox/apicore-gm-client && \
+          ansible-playbook deploy/playbooks/deploy_ec2.yml \
+            -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
+            --user ubuntu \
+            --private-key "${{ secrets.SSH_PRIVATE_KEY }}" \
+            --ssh-extra-args "-o StrictHostKeyChecking=no"
+      
