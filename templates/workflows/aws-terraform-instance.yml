@@ -2,8 +2,8 @@ name: AWS Terraform Instance Deploy
 
 # Este workflow se encarga de desplegar una instancia en AWS utilizando Terraform.
 on:
-  workflow_dispatch:  # Permite ejecutar el workflow manualmente desde GitHub Actions
-  push:  # Se ejecuta automáticamente cuando se realizan cambios en los archivos especificados en paths
+  workflow_dispatch:
+  push:
     branches:
       - main
     paths:
@@ -23,7 +23,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: terraform  #  Modifica esta ruta si tus archivos de Terraform están en otra ubicación
+        working-directory: terraform
 
     steps:
       # Paso 1: Clonar el repositorio
