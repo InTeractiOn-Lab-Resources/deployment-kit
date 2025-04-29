@@ -1,10 +1,17 @@
----
 - name: Descargar imágenes Docker preconstruidas
   command: docker pull {{ item }}
   loop:
     - thecariah/api-core-test:latest
     - thecariah/api-gm-test:latest
     - thecariah/client-test:latest
+
+- name: Crear carpeta de Docker Compose si no existe
+  file:
+    path: "{{ compose_path }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
 
 - name: Crear archivo .env con rutas necesarias
   copy:
