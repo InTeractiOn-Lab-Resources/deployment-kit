@@ -1,15 +1,11 @@
-name: Sandbox Terraform Deploy
+name: Sandbox Infrastructure Setup
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'sandbox/apicore-gm-client/terraform/**'
-      - '.github/workflows/sandbox.yml'
 
 jobs:
-  deploy-sandbox:
-    name: Deploy apicore-gm-client to AWS EC2
+  create-infrastructure:
+    name: Create AWS EC2 Infrastructure with Terraform
     runs-on: ubuntu-latest
 
     env:
@@ -21,8 +17,11 @@ jobs:
       run:
         working-directory: sandbox/apicore-gm-client/terraform
 
+    outputs:
+      instance_ip: ${{ steps.extract.outputs.instance_ip }}
+
     steps:
-      - name: Checkout repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Terraform
@@ -39,5 +38,26 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
-      - name: Terraform Apply
+      - name: Terraform Apply (Create EC2 Instance)
         run: terraform apply -auto-approve
+
+      - name: Extract Public IP
+        id: extract
+        run: |
+          echo "instance_ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
+
+  provision-instance:
+    name: Provision EC2 Instance with Ansible
+    needs: create-infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Ansible Playbook to Configure Instance
+        run: |
+          ansible-playbook sandbox/apicore-gm-client/ansible/deploy_ec2.yml -i "${{ needs.create-infrastructure.outputs.instance_ip }}," --user ubuntu --private-key "${{ secrets.SSH_PRIVATE_KEY }}" --ssh-extra-args "-o StrictHostKeyChecking=no"

@@ -5,7 +5,7 @@
   vars:
     project_root: "/home/ubuntu/infra-sandbox"
     compose_path: "/home/ubuntu/infra-sandbox/deployment-kit/sandbox/apicore-gm-client"
-    clone_repos: true
+    clone_repos: false
   roles:
     - python
     - docker
