@@ -1,6 +1,9 @@
+# ========================================================
+# WORKFLOW: DESPLIEGUE DE INSTANCIA AWS CON TERRAFORM
+# Descripción: Crea y configura una instancia EC2 en AWS utilizando Terraform de forma automatizada.
+# ========================================================
 name: AWS Terraform Instance Deploy
 
-# Este workflow se encarga de desplegar una instancia en AWS utilizando Terraform.
 on:
   workflow_dispatch:
   push:

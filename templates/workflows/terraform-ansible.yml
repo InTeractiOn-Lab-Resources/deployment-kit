@@ -1,0 +1,186 @@
+# ========================================================
+# WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
+# Descripción: Crea infraestructura en AWS y despliega aplicaciones
+# ========================================================
+name: Infraestructura y Despliegue Automatizado
+
+on:
+  # Ejecución manual desde la interfaz de GitHub
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno de despliegue'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      should_cleanup:
+        description: 'Eliminar infraestructura anterior'
+        required: false
+        default: false
+        type: boolean
+
+  # Opcional: Ejecución automática en push a main/master
+  # push:
+  #   branches: [ main ]
+  #   paths:
+  #     - 'terraform/**'
+  #     - 'ansible/**'
+
+# Define los trabajos del workflow
+jobs:
+  # TRABAJO 1: CREACIÓN DE INFRAESTRUCTURA CON TERRAFORM
+  create-infrastructure:
+    name: Crear Infraestructura con Terraform
+    runs-on: ubuntu-latest
+
+    env:
+      # Variables de entorno para autenticación en AWS
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # Variable para la clave SSH pública (requerida por Terraform)
+      TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY }}
+      # Variables adicionales según el entorno seleccionado
+      TF_VAR_environment: ${{ github.event.inputs.environment || 'dev' }}
+      # Ruta al directorio donde se encuentra la configuración de Terraform
+      TF_WORKING_DIR: terraform
+
+    # Define el directorio de trabajo para todos los comandos en este job
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    # Define las salidas que se pasarán al siguiente job
+    outputs:
+      instance_ip: ${{ steps.extract.outputs.instance_ip }}
+      instance_id: ${{ steps.extract.outputs.instance_id }}
+
+    steps:
+      # Paso 1: Obtener el código del repositorio
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # Paso 3: Inicializar Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # Paso 4: Validar la configuración
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Paso 5: Crear un plan de ejecución
+      - name: Terraform Plan
+        run: terraform plan -var="project_prefix=app-${{ env.TF_VAR_environment }}"
+
+      # Paso 6: Aplicar la configuración para crear la infraestructura
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var="project_prefix=app-${{ env.TF_VAR_environment }}"
+
+      # Paso 7: Extraer información de la instancia creada
+      - name: Extract Instance Details
+        id: extract
+        run: |
+          echo "instance_ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
+          echo "instance_id=$(terraform output -raw instance_id)" >> $GITHUB_OUTPUT
+
+  # TRABAJO 2: CONFIGURACIÓN DE LA INSTANCIA CON ANSIBLE
+  provision-instance:
+    name: Provisionar Instancia con Ansible
+    # Este job depende del anterior
+    needs: create-infrastructure
+    runs-on: ubuntu-latest
+    
+    env:
+      # Variables para personalizar el despliegue
+      APP_ENV: ${{ github.event.inputs.environment || 'dev' }}
+      # Directorio de Ansible (ajustar según estructura)
+      ANSIBLE_DIR: deploy
+
+    steps:
+      # Paso 1: Instalar Ansible
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible sshpass
+
+      # Paso 2: Obtener el código del repositorio
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 3: Crear archivo de inventario dinámico
+      - name: Create Ansible inventory
+        run: |
+          echo "[app_servers]" > inventory.ini
+          echo "${{ needs.create-infrastructure.outputs.instance_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=private_key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory.ini
+
+      # Paso 4: Escribir la clave SSH para conectar a la instancia
+      - name: Write SSH Private Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      # Paso 5: Esperar a que la instancia esté lista
+      - name: Wait for instance to be ready
+        run: |
+          echo "Esperando 30 segundos para asegurar que la instancia esté lista..."
+          sleep 30
+
+      # Paso 6: Ejecutar Ansible para configurar la instancia
+      - name: Run Ansible Playbook
+        run: |
+          cd ${ANSIBLE_DIR} && \
+          ansible-playbook playbooks/deploy.yml \
+            -i ../inventory.ini \
+            -e "environment=$APP_ENV" \
+            -e "clone_repos=${{ github.event.inputs.use_local_repos || 'false' }}" \
+            -e "docker_registry=${{ secrets.DOCKER_REGISTRY || '' }}"
+      
+      # Paso 7: Verificar despliegue
+      - name: Verify Deployment
+        run: |
+          echo "Verificando servicios desplegados en ${{ needs.create-infrastructure.outputs.instance_ip }}..."
+          curl -s http://${{ needs.create-infrastructure.outputs.instance_ip }}:80 || echo "Frontend no disponible aún"
+          curl -s http://${{ needs.create-infrastructure.outputs.instance_ip }}:80/api-1/health || echo "API-1 no disponible aún"
+      
+      # Paso 8: Limpiar clave SSH
+      - name: Cleanup SSH Key
+        run: rm -f private_key.pem
+
+  # TRABAJO 3: NOTIFICAR RESULTADO (opcional)
+  notify:
+    name: Notificar Resultado
+    needs: [create-infrastructure, provision-instance]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Resultado del Despliegue
+        run: |
+          if [[ "${{ needs.provision-instance.result }}" == "success" ]]; then
+            echo "Despliegue completado exitosamente"
+            echo "Aplicación disponible en: http://${{ needs.create-infrastructure.outputs.instance_ip }}"
+            echo "ID de instancia: ${{ needs.create-infrastructure.outputs.instance_id }}"
+          else
+            echo "El despliegue ha fallado"
+          fi
+
+# INSTRUCCIONES DE USO:
+# 1. Crea los siguientes secretos en tu repositorio:
+#    - AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY: Credenciales de AWS
+#    - INLINE_PUBLIC_KEY: Tu clave SSH pública (cat ~/.ssh/id_rsa.pub)
+#    - SSH_PRIVATE_KEY: Tu clave SSH privada (cat ~/.ssh/id_rsa)
+#    - DOCKER_REGISTRY: URL de tu registro Docker (opcional)
+#
+# 2. Asegúrate de tener la estructura de directorios:
+#    - /terraform: Configuración de Terraform
+#    - /deploy/playbooks: Playbooks de Ansible
+#
+# 3. Para ejecutar manualmente, ve a la pestaña "Actions" en GitHub y 
+#    selecciona "Infraestructura y Despliegue Automatizado"

@@ -1,6 +1,9 @@
+# ========================================================
+# WORKFLOW: BUILD Y PUSH DE IMAGEN DOCKER
+# Descripción: Construye y publica una imagen en Docker Hub cuando se realizan cambios en el repositorio.
+# ========================================================
 name: Build and Push Docker Image
 
-# Este workflow construye y publica una imagen en Docker Hub cuando se realizan cambios en las ramas especificadas
 on:
   push:
     branches:
