@@ -1,0 +1,24 @@
+---
+# =====================================
+# ROL: PROVISION
+# Descripción: Orquesta el despliegue de servicios usando Docker
+# =====================================
+
+# Elegir entre imágenes preconstruidas o clonar repositorios
+# El comportamiento se controla mediante la variable 'clone_repos'
+
+# Opción 1: Usar imágenes preconstruidas de Docker Hub
+- name: Usar imágenes preconstruidas
+  include_tasks: use_prebuilt_images.yml
+  when: not clone_repos | default(false)
+
+# Opción 2: Clonar repositorios y construir imágenes localmente
+- name: Clonar repositorios y construir imágenes localmente
+  include_tasks: clone_repos.yml
+  when: clone_repos | default(false)
+
+# Una vez configurada la aplicación (clonada o con imágenes), verificar el estado
+- name: Verificar el estado de los contenedores
+  command: docker ps
+  register: docker_ps_output
+  changed_when: false

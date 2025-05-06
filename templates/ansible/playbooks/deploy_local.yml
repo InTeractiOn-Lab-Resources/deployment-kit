@@ -1,0 +1,60 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE LOCAL
+# Descripción: Configura el entorno local para desarrollo
+# =====================================
+
+- name: Despliegue local de aplicación
+  hosts: local
+  become: true
+  vars:
+    # Directorio raíz del proyecto 
+    project_root: "/ruta/a/tu/proyecto"
+    
+    # Directorio donde está el docker-compose.yml
+    compose_path: "/ruta/a/tu/proyecto/config"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas, true = clonar y construir)
+    clone_repos: false
+    
+    # Configuración de servicios (para imágenes preconstruidas)
+    docker_registry: ""  # Ejemplo: "registry.example.com/" (incluir slash final)
+    service1_image: "usuario/servicio1"
+    service2_image: "usuario/servicio2"
+    service3_image: "usuario/servicio3"
+    
+    # Configuración de servicios (para clonar repositorios)
+    service1_repo_name: "servicio1"
+    service1_repo_url: "https://github.com/usuario/servicio1.git"
+    
+    service2_repo_name: "servicio2"
+    service2_repo_url: "https://github.com/usuario/servicio2.git"
+    
+    service3_repo_name: "servicio3"
+    service3_repo_url: "https://github.com/usuario/servicio3.git"
+    
+    config_repo_name: "config"
+    config_repo_url: "https://github.com/usuario/config-repo.git"
+    
+    # Configuración de Nginx
+    app_name: "mi-aplicacion"
+    frontend_port: "3000"
+    api1_prefix: "api1"
+    api1_port: "3001"
+    api2_prefix: "api2"
+    api2_port: "3002"
+    
+  roles:
+    - python
+    - docker
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 1. Modifica la variable "project_root" para que apunte al directorio raíz de tu proyecto.
+# 2. Modifica "compose_path" para que apunte al directorio donde está tu docker-compose.yml.
+# 3. Elige el modo de despliegue con "clone_repos" (true/false).
+# 4. Si usas imágenes preconstruidas (clone_repos: false), configura las variables service*_image.
+# 5. Si clonas repositorios (clone_repos: true), configura las variables service*_repo_*.
+# 6. Personaliza la configuración de Nginx según tus necesidades.
+# 7. Ejecuta el playbook con: ansible-playbook deploy_local.yml -i inventory/hosts.ini

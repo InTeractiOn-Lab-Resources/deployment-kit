@@ -1,0 +1,66 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN AWS
+# Descripción: Configura una instancia EC2 para ejecutar la aplicación
+# =====================================
+
+- name: Despliegue en instancia EC2 AWS
+  hosts: all
+  become: true
+  vars:
+    # Directorio raíz del proyecto en el servidor
+    project_root: "/home/ubuntu/mi-proyecto"
+    
+    # Directorio donde está el docker-compose.yml
+    compose_path: "/home/ubuntu/mi-proyecto/config"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas, true = clonar y construir)
+    clone_repos: false
+    
+    # Configuración de servicios (para imágenes preconstruidas)
+    docker_registry: ""  # Ejemplo: "registry.example.com/" (incluir slash final)
+    service1_image: "usuario/servicio1"
+    service2_image: "usuario/servicio2"
+    service3_image: "usuario/servicio3"
+    
+    # Variables de entorno adicionales para el archivo .env
+    additional_env_vars: |
+      DATABASE_URL=postgresql://user:password@db:5432/database
+      REDIS_URL=redis://redis:6379/0
+      
+    # Configuración de Nginx
+    app_name: "mi-aplicacion"
+    server_name: "mi-dominio.com"  # Reemplazar con tu dominio
+    frontend_port: "3000"
+    api1_prefix: "api1"
+    api1_port: "3001"
+    api2_prefix: "api2"
+    api2_port: "3002"
+    
+    # Propietario de los archivos (normalmente el usuario del servidor)
+    file_owner: "ubuntu"
+    file_group: "ubuntu"
+    
+  roles:
+    - python
+    - docker
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 1. Modifica las variables según tu entorno:
+#    - project_root: directorio donde se almacenarán los archivos en el servidor
+#    - compose_path: ubicación del docker-compose.yml
+#    - clone_repos: elige si quieres clonar los repositorios o usar imágenes preconstruidas
+#
+# 2. Si usas imágenes preconstruidas (recomendado para producción):
+#    - Configura service*_image con las rutas a tus imágenes Docker
+#
+# 3. Si necesitas variables de entorno adicionales, añádelas en additional_env_vars
+#
+# 4. Configura Nginx:
+#    - server_name: tu dominio
+#    - puertos y prefijos de API según tu aplicación
+#
+# 5. Ejecuta el playbook:
+#    ansible-playbook deploy_ec2.yml -i inventory/hosts.ini
