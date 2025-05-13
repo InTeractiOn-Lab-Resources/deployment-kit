@@ -20,6 +20,13 @@ jobs:
           echo "${{ secrets.DIINF_SSH_PRIVATE_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
+      - name: Try SSH Connection
+        run: |
+          ansible -m ping all -i "felucia.diinf.usach.cl," \
+            --user cantillanca \
+            --private-key private_key.pem \
+            --ssh-extra-args "-o StrictHostKeyChecking=no"
+
       - name: Run Ansible Playbook to Configure DIINF
         run: |
           cd sandbox/apicore-gm-client && \
