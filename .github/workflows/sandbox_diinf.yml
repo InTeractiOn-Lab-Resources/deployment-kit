@@ -1,11 +1,11 @@
-name: DIINF Deployment via Local Proxy
+name: DIINF Deployment Direct Connection
 
 on:
   workflow_dispatch:
 
 jobs:
   provision-diinf:
-    name: Provision DIINF via SSH Proxy
+    name: Provision DIINF with Ansible
     runs-on: ubuntu-latest
 
     steps:
@@ -20,21 +20,21 @@ jobs:
           echo "${{ secrets.DIINF_SSH_PRIVATE_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      - name: Try SSH Connection (via Proxy)
+      - name: Try Direct SSH Connection
         run: |
-          ansible -m ping all -i "localhost," \
+          ansible -m ping all -i "felucia.diinf.usach.cl," \
             --user cantillanca \
             --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -p 2222 cantillanca@192.168.1.17\"'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
           cd sandbox/apicore-gm-client && \
           ansible-playbook deploy/playbooks/deploy_diinf.yml \
-            -i "localhost," \
+            -i "felucia.diinf.usach.cl," \
             --user cantillanca \
             --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -p 2222 cantillanca@192.168.1.17\"'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
