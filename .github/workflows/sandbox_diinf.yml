@@ -22,19 +22,19 @@ jobs:
 
       - name: Try SSH Connection
         run: |
-          ansible -m ping all -i "felucia.diinf.usach.cl," \
+          ansible -m ping all -i "localhost:2222," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no"
+            --ssh-extra-args "-o StrictHostKeyChecking=no -p 2222"
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
           cd sandbox/apicore-gm-client && \
           ansible-playbook deploy/playbooks/deploy_diinf.yml \
-            -i "felucia.diinf.usach.cl," \
+            -i "localhost:2222," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no"
+            --ssh-extra-args "-o StrictHostKeyChecking=no -p 2222"
 
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
