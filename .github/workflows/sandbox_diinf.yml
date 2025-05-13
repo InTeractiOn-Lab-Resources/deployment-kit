@@ -1,0 +1,32 @@
+name: DIINF Deployment
+
+on:
+  workflow_dispatch:
+    
+jobs:
+  provision-diinf:
+    name: Provision DIINF with Ansible
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Write SSH Private Key
+        run: |
+          echo "${{ secrets.DIINF_SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      - name: Run Ansible Playbook to Configure DIINF
+        run: |
+          ansible-playbook deploy/playbooks/deploy_diinf.yml \
+            -i "felucia.diinf.usach.cl," \
+            --user cantillanca \
+            --private-key private_key.pem \
+            --ssh-extra-args "-o StrictHostKeyChecking=no"
+
+      - name: Cleanup SSH Key
+        run: rm -f private_key.pem

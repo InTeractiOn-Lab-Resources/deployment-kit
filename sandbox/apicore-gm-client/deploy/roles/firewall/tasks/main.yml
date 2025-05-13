@@ -1,0 +1,27 @@
+---
+- name: Asegurar que UFW esté instalado
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Permitir tráfico SSH (puerto 22) solo desde IP de la universidad
+  command: ufw allow in on eth0 to any port 22 proto tcp
+  become: true
+
+- name: Permitir tráfico HTTP (puerto 80) y HTTPS (puerto 443)
+  command: ufw allow proto tcp from any to any port 80,443
+  become: true
+
+- name: Habilitar UFW
+  command: ufw --force enable
+  become: true
+
+- name: Verificar configuración del Firewall
+  command: ufw status
+  register: ufw_status
+
+- name: Mostrar estado del Firewall
+  debug:
+    var: ufw_status.stdout

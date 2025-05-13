@@ -80,10 +80,3 @@
         name: nginx
         state: reloaded
       become: true
-
-- name: Asegurar que el firewall permita tráfico HTTP
-  ufw:
-    rule: allow
-    port: "80"
-    proto: tcp
-  become: true

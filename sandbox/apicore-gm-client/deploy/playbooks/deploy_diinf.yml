@@ -1,0 +1,14 @@
+---
+- name: Despliegue de apicore-gm-client en DIINF (Felucia)
+  hosts: all
+  become: true
+  vars:
+    project_root: "/home/cantillanca/infra-sandbox"
+    compose_path: "/home/cantillanca/infra-sandbox/deployment-kit/sandbox/apicore-gm-client"
+    clone_repos: false
+  roles:
+    - firewall
+    - python
+    - docker
+    - nginx
+    - provision
