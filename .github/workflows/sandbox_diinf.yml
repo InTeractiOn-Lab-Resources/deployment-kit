@@ -25,7 +25,7 @@ jobs:
           ansible -m ping all -i "localhost:2222," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no -p 2222"
+            -e "ansible_ssh_extra_args='-o StrictHostKeyChecking=no'"
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
@@ -34,7 +34,7 @@ jobs:
             -i "localhost:2222," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no -p 2222"
+            -e "ansible_ssh_extra_args='-o StrictHostKeyChecking=no'"
 
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
