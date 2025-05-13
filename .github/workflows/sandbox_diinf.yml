@@ -2,7 +2,7 @@ name: DIINF Deployment
 
 on:
   workflow_dispatch:
-    
+
 jobs:
   provision-diinf:
     name: Provision DIINF with Ansible
@@ -22,6 +22,7 @@ jobs:
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
+          cd sandbox/apicore-gm-client && \
           ansible-playbook deploy/playbooks/deploy_diinf.yml \
             -i "felucia.diinf.usach.cl," \
             --user cantillanca \
