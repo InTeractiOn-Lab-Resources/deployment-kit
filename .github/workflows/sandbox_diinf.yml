@@ -25,7 +25,7 @@ jobs:
           ansible -m ping all -i "localhost," \
             --user cantillanca \
             --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=cantillanca@192.168.1.17:2222'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -p 2222 cantillanca@192.168.1.17\"'"
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
@@ -34,7 +34,7 @@ jobs:
             -i "localhost," \
             --user cantillanca \
             --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=cantillanca@192.168.1.17:2222'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -p 2222 cantillanca@192.168.1.17\"'"
 
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
