@@ -22,19 +22,19 @@ jobs:
 
       - name: Try SSH Connection (via Proxy)
         run: |
-          ansible -m ping all -i "localhost:2222," \
+          ansible -m ping all -i "localhost," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no -o ProxyCommand='ssh -W %h:%p -p 2222 cantillanca@192.168.1.17'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=cantillanca@192.168.1.17:2222'"
 
       - name: Run Ansible Playbook to Configure DIINF
         run: |
           cd sandbox/apicore-gm-client && \
           ansible-playbook deploy/playbooks/deploy_diinf.yml \
-            -i "localhost:2222," \
+            -i "localhost," \
             --user cantillanca \
             --private-key private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no -o ProxyCommand='ssh -W %h:%p -p 2222 cantillanca@192.168.1.17'"
+            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyJump=cantillanca@192.168.1.17:2222'"
 
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
