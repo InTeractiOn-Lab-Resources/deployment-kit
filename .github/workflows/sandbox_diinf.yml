@@ -1,4 +1,4 @@
-name: Deploy to DIINF VM using SSH over HTTPS (443)
+name: Deploy to DIINF VM using SSH Proxy
 
 on:
   workflow_dispatch:  # Permite iniciar el workflow manualmente
@@ -10,22 +10,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up SSH Key with Passphrase
+      - name: Set up SSH with Local Proxy
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_KEY_PROXY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo -e "Host github.com\n\tHostname ssh.github.com\n\tPort 443\n\tUser git\n\tIdentityFile ~/.ssh/id_ed25519\n\tPreferredAuthentications publickey\n" > ~/.ssh/config
-          ssh -T -p 443 git@ssh.github.com
+          echo -e "Host proxy-jump\n\tHostname ${{ secrets.PROXY_HOST }}\n\tUser ${{ secrets.PROXY_USERNAME }}\n\tPort 8022\n\tIdentityFile ~/.ssh/id_ed25519\n" > ~/.ssh/config
+          echo -e "Host felucia\n\tHostname ${{ secrets.HOST }}\n\tUser ${{ secrets.USERNAME }}\n\tPort 22\n\tProxyJump proxy-jump\n" >> ~/.ssh/config
+          ssh -i ~/.ssh/id_ed25519 -o "StrictHostKeyChecking=no" -o "IdentitiesOnly=yes" -o "BatchMode=yes" -J proxy-jump ${{ secrets.USERNAME }}@${{ secrets.HOST }} -p 22 whoami
 
-      - name: Connect to DIINF VM using SSH with Passphrase
+      - name: Connect to DIINF VM using SSH via Proxy
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.HOST }}       # IP la máquina del DIINF
-          username: ${{ secrets.USERNAME }} # Usuario en la VM
-          key: ${{ secrets.SSH_KEY }}     # Clave SSH confgurada
-          passphrase: ${{ secrets.PASSPHRASE }} # Passphrase SSH
-          port: 443                       # Se utiliza el puerto 443 porque el 22 está bloqueado
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY_PROXY }}
+          passphrase: ${{ secrets.PASSPHRASE }} # Tu passphrase del proxy
+          password: ${{ secrets.PASSWORD }}     # La contraseña de la VM si la necesitas
+          port: 22
+          proxy_host: ${{ secrets.PROXY_HOST }}
+          proxy_username: ${{ secrets.PROXY_USERNAME }}
+          proxy_key: ${{ secrets.SSH_KEY_PROXY }}
+          proxy_port: 8022
           script: |
             whoami
             hostname
