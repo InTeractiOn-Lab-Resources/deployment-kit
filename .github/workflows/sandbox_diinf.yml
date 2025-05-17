@@ -1,37 +1,41 @@
-name: Deploy to DIINF VM using SSH Proxy
+name: Deploy to DIINF VM via VPN
 
 on:
-  workflow_dispatch:  # Permite iniciar el workflow manualmente
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up SSH with Local Proxy
+      - name: Install OpenVPN
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_PROXY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          echo -e "Host proxy-jump\n\tHostname ${{ secrets.PROXY_HOST }}\n\tUser ${{ secrets.PROXY_USERNAME }}\n\tPort 8022\n\tIdentityFile ~/.ssh/id_ed25519\n" > ~/.ssh/config
-          echo -e "Host felucia\n\tHostname ${{ secrets.HOST }}\n\tUser ${{ secrets.USERNAME }}\n\tPort 22\n\tProxyJump proxy-jump\n" >> ~/.ssh/config
-          ssh -i ~/.ssh/id_ed25519 -o "StrictHostKeyChecking=no" -o "IdentitiesOnly=yes" -o "BatchMode=yes" -J proxy-jump ${{ secrets.USERNAME }}@${{ secrets.HOST }} -p 22 whoami
+          sudo apt update
+          sudo apt install -y openvpn openvpn-systemd-resolved
 
-      - name: Connect to DIINF VM using SSH via Proxy
-        uses: appleboy/ssh-action@v1
+      - name: Create VPN Config Securely
+        run: |
+          echo "${{ secrets.OVPN_CONFIG }}" > client.ovpn
+          chmod 600 client.ovpn
+
+      - name: Connect to VPN
+        uses: kota65535/github-openvpn-connect-action@v2
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY_PROXY }}
-          passphrase: ${{ secrets.PASSPHRASE }} # Tu passphrase del proxy
-          password: ${{ secrets.PASSWORD }}     # La contraseña de la VM si la necesitas
+          config_file: client.ovpn
+          username: ${{ secrets.OVPN_USERNAME }}
+          password: ${{ secrets.OVPN_PASSWORD }}
+          client_key: ${{ secrets.USER_KEY }}
+
+      - name: Use SSH to Deploy with Password
+        uses: appleboy/ssh-action@v1
+        with: 
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.PASSWORD }}  # Tu contraseña SSH de la VM
           port: 22
-          proxy_host: ${{ secrets.PROXY_HOST }}
-          proxy_username: ${{ secrets.PROXY_USERNAME }}
-          proxy_key: ${{ secrets.SSH_KEY_PROXY }}
-          proxy_port: 8022
           script: |
             whoami
             hostname
