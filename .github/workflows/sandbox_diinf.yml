@@ -23,7 +23,10 @@ jobs:
 
       - name: Connect to VPN (Debug Mode)
         run: |
-          sudo openvpn --config client.ovpn --auth-user-pass <(echo -e "${{ secrets.OVPN_USERNAME }}\n${{ secrets.OVPN_PASSWORD }}") --auth-nocache --verb 4 --log openvpn_debug.log || cat openvpn_debug.log
+          sudo openvpn --config client.ovpn --auth-user-pass <(echo -e "${{ secrets.OVPN_USERNAME }}\n${{ secrets.OVPN_PASSWORD }}") \
+          --auth-nocache --verb 4 --log openvpn_debug.log
+          sudo chmod 666 openvpn_debug.log
+          cat openvpn_debug.log
 
       - name: Use SSH to Deploy with Password
         uses: appleboy/ssh-action@v1
