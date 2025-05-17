@@ -1,40 +1,32 @@
-name: DIINF Deployment Direct Connection
+name: Deploy to DIINF VM using SSH over HTTPS (443)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Permite iniciar el workflow manualmente
 
 jobs:
-  provision-diinf:
-    name: Provision DIINF with Ansible
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Install Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
-
-      - name: Write SSH Private Key
+      - name: Set up SSH Key with Passphrase
         run: |
-          echo "${{ secrets.DIINF_SSH_PRIVATE_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo -e "Host github.com\n\tHostname ssh.github.com\n\tPort 443\n\tUser git\n\tIdentityFile ~/.ssh/id_ed25519\n\tPreferredAuthentications publickey\n" > ~/.ssh/config
+          ssh -T -p 443 git@ssh.github.com
 
-      - name: Try Direct SSH Connection
-        run: |
-          ansible -m ping all -i "felucia.diinf.usach.cl," \
-            --user cantillanca \
-            --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
-
-      - name: Run Ansible Playbook to Configure DIINF
-        run: |
-          cd sandbox/apicore-gm-client && \
-          ansible-playbook deploy/playbooks/deploy_diinf.yml \
-            -i "felucia.diinf.usach.cl," \
-            --user cantillanca \
-            --private-key private_key.pem \
-            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
-
-      - name: Cleanup SSH Key
-        run: rm -f private_key.pem
+      - name: Connect to DIINF VM using SSH with Passphrase
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}       # IP la máquina del DIINF
+          username: ${{ secrets.USERNAME }} # Usuario en la VM
+          key: ${{ secrets.SSH_KEY }}     # Clave SSH confgurada
+          passphrase: ${{ secrets.PASSPHRASE }} # Passphrase SSH
+          port: 443                       # Se utiliza el puerto 443 porque el 22 está bloqueado
+          script: |
+            whoami
+            hostname
+            uptime
