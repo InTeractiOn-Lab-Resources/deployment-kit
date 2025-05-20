@@ -7,6 +7,7 @@
 - name: Despliegue en instancia EC2 AWS
   hosts: all
   become: true
+  
   vars:
     # Directorio raíz del proyecto en el servidor
     project_root: "/home/ubuntu/mi-proyecto"
@@ -23,11 +24,6 @@
     service2_image: "usuario/servicio2"
     service3_image: "usuario/servicio3"
     
-    # Variables de entorno adicionales para el archivo .env
-    additional_env_vars: |
-      DATABASE_URL=postgresql://user:password@db:5432/database
-      REDIS_URL=redis://redis:6379/0
-      
     # Configuración de Nginx
     app_name: "mi-aplicacion"
     server_name: "mi-dominio.com"  # Reemplazar con tu dominio

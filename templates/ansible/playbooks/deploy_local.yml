@@ -1,10 +1,10 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE LOCAL
+# PLAYBOOK: DESPLIEGUE LOCAL (Ubuntu VM o WSL)
 # Descripción: Configura el entorno local para desarrollo
 # =====================================
 
-- name: Despliegue local de aplicación
+- name: Despliegue local en Ubuntu
   hosts: local
   become: true
   vars:

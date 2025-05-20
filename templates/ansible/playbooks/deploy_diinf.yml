@@ -1,0 +1,140 @@
+# ========================================================
+# PLAYBOOK: DESPLIEGUE EN EL DIINF
+# Descripción: Configura una VM del DIINF con todos los componentes necesarios para desplegar una aplicación
+# ========================================================
+---
+- name: Despliegue en VMs del DIINF
+  hosts: local
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Directorio raíz del proyecto en el servidor
+    project_root: "/home/{{ ansible_user }}/mi-aplicacion"
+    
+    # Directorio donde está el docker-compose.yml
+    compose_path: "/home/{{ ansible_user }}/mi-aplicacion/deployment"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas, true = clonar y construir)
+    clone_repos: false
+    
+    # CONFIGURACIÓN DE SERVICIOS DOCKER
+    # ---------------------------------
+    # Repositorios para clonar (cuando clone_repos = true)
+    service1_repo_name: "api-core"
+    service1_repo_url: "https://github.com/usuario/api-core.git"
+    
+    service2_repo_name: "api-gm"
+    service2_repo_url: "https://github.com/usuario/api-gm.git"
+    
+    service3_repo_name: "client-frontend"
+    service3_repo_url: "https://github.com/usuario/client-frontend.git"
+    
+    config_repo_name: "deployment-config"
+    config_repo_url: "https://github.com/usuario/deployment-config.git"
+    
+    # Imágenes Docker (cuando clone_repos = false)
+    docker_registry: ""  # Ejemplo: "registry.example.com/" (incluir / final)
+    service1_image: "usuario/api-core"
+    service1_tag: "latest"
+    
+    service2_image: "usuario/api-gm" 
+    service2_tag: "latest"
+    
+    service3_image: "usuario/client-frontend"
+    service3_tag: "latest"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------
+    # Nombre para el archivo de configuración de Nginx
+    app_name: "mi-aplicacion"
+    
+    # Nombre del servidor (para la directiva server_name)
+    server_name: "{{ domains[0] | default('localhost') }}"
+    
+    # Configuración de puertos y rutas para Nginx
+    frontend_port: "3000"
+    api1_prefix: "api-core"
+    api1_port: "3001"
+    api2_prefix: "api-gm"
+    api2_port: "3002"
+    
+    # Quitar la configuración default de Nginx
+    remove_default_config: true
+    
+    # Configuración de Firewall
+    configure_firewall: true
+    http_port: "80"
+    
+    # CONFIGURACIÓN GENERAL
+    # -------------------
+    # Nombre del proyecto para etiquetas
+    project_name: "mi-aplicacion"
+    
+    # Puertos a exponer en la aplicación
+    app_ports:
+      - 80
+      - 443
+      - 3000
+      - 3001
+      - 3002
+    
+    # Dominios para configurar en Nginx
+    domains:
+      - "mi-app.diinf.usach.cl"
+    
+    # Usuario del sistema que ejecutará la aplicación
+    app_user: "{{ ansible_user }}"
+    file_owner: "{{ ansible_user }}"
+    file_group: "{{ ansible_user }}"
+    
+    # Directorio para archivos de log
+    log_path: "/var/log/{{ project_name }}"
+    
+    # Configuración de SSL/TLS (si es necesario)
+    enable_ssl: false
+    ssl_cert_path: "/etc/ssl/certs/{{ project_name }}.crt"
+    ssl_key_path: "/etc/ssl/private/{{ project_name }}.key"
+  
+  roles:
+    - firewall
+    - python
+    - docker
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 1. PERSONALIZACIÓN DEL PLAYBOOK:
+#    a) Ajusta las variables básicas:
+#       - project_root: Ruta donde se almacenarán los archivos
+#       - compose_path: Ruta al directorio con docker-compose.yml
+#       - project_name: Nombre descriptivo para tu proyecto
+#
+#    b) Define tus servicios:
+#       - Si vas a clonar repositorios (clone_repos: true):
+#         Configura service*_repo_name y service*_repo_url
+#
+#       - Si usarás imágenes precompiladas (clone_repos: false):
+#         Configura service*_image y service*_tag
+#
+#    c) Configura Nginx:
+#       - domains: Lista de dominios para tu aplicación
+#       - Configura los prefijos y puertos de tus APIs
+#
+# 2. EJECUCIÓN DEL PLAYBOOK:
+#    a) Ejecución básica:
+#       ansible-playbook deploy_diinf.yml -K
+#
+#    b) Especificando variables en línea de comandos:
+#       ansible-playbook deploy_diinf.yml -K -e "project_name=mi-app-web clone_repos=true"
+#
+#    c) Para ver qué haría sin ejecutar cambios:
+#       ansible-playbook deploy_diinf.yml -K --check
+#
+# 3. MANTENIMIENTO:
+#    - Para actualizar solo la configuración de Nginx:
+#      ansible-playbook deploy_diinf.yml -K --tags nginx
+#
+#    - Para actualizar las aplicaciones sin reinstalar dependencias:
+#      ansible-playbook deploy_diinf.yml -K --tags provision

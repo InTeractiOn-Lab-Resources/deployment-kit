@@ -1,6 +1,6 @@
 ---
 - name: Despliegue de apicore-gm-client en DIINF (Felucia)
-  hosts: all
+  hosts: local
   become: true
   vars:
     project_root: "/home/cantillanca/infra-sandbox"
