@@ -25,8 +25,8 @@
 
       # Variables adicionales (bases de datos, configuración, etc.)
       {{ additional_env_vars | default('') }}
-    owner: "{{ file_owner | default(ansible_user_id) }}"
-    group: "{{ file_group | default(ansible_user_id) }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
     mode: '0644'
 
 # Levantar los contenedores

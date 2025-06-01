@@ -1,41 +1,65 @@
 ---
 # =====================================
 # PLAYBOOK: DESPLIEGUE EN AWS
-# Descripción: Configura una instancia EC2 para ejecutar la aplicación
+# Descripción: Configura una instancia EC2 de AWS para ejecutar la aplicación
 # =====================================
 
 - name: Despliegue en instancia EC2 AWS
-  hosts: all
+  hosts: ec2
   become: true
   
   vars:
-    # Directorio raíz del proyecto en el servidor
-    project_root: "/home/ubuntu/mi-proyecto"
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "mi-aplicacion"
+    
+    # Directorio raíz del proyecto
+    project_root: "/home/usuario/mi-aplicacion"
     
     # Directorio donde está el docker-compose.yml
-    compose_path: "/home/ubuntu/mi-proyecto/config"
+    compose_path: "/home/usuario/mi-aplicacion/docker"
     
-    # Modo de despliegue (false = usar imágenes preconstruidas, true = clonar y construir)
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
     
-    # Configuración de servicios (para imágenes preconstruidas)
-    docker_registry: ""  # Ejemplo: "registry.example.com/" (incluir slash final)
-    service1_image: "usuario/servicio1"
-    service2_image: "usuario/servicio2"
-    service3_image: "usuario/servicio3"
+    # CONFIGURACIÓN DE SERVICIOS DOCKER
+    # ---------------------------------
+    # Imágenes Docker (cuando clone_repos = false)
+    docker_registry: ""
+    service1_image: "usuario/api-core"
+    service1_tag: "latest"
     
-    # Configuración de Nginx
-    app_name: "mi-aplicacion"
-    server_name: "mi-dominio.com"  # Reemplazar con tu dominio
+    service2_image: "usuario/api-gm" 
+    service2_tag: "latest"
+    
+    service3_image: "usuario/client-frontend"
+    service3_tag: "latest"
+
+    # Repositorios para clonar (cuando clone_repos = true)
+    service1_repo_name: "api-core"
+    service1_repo_url: "https://github.com/usuario/api-core.git"
+    
+    service2_repo_name: "api-gm"
+    service2_repo_url: "https://github.com/usuario/api-gm.git"
+    
+    service3_repo_name: "client-frontend"
+    service3_repo_url: "https://github.com/usuario/client-frontend.git"
+    
+    config_repo_name: "deployment-config"
+    config_repo_url: "https://github.com/usuario/deployment-config.git"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor
+    server_name: "_"
+    
+    # Configuración de puertos y rutas para Nginx
     frontend_port: "3000"
-    api1_prefix: "api1"
+    api1_prefix: "api-core"
     api1_port: "3001"
-    api2_prefix: "api2"
+    api2_prefix: "api-gm"
     api2_port: "3002"
-    
-    # Propietario de los archivos (normalmente el usuario del servidor)
-    file_owner: "ubuntu"
-    file_group: "ubuntu"
     
   roles:
     - python
@@ -44,19 +68,40 @@
     - provision
 
 # INSTRUCCIONES:
-# 1. Modifica las variables según tu entorno:
-#    - project_root: directorio donde se almacenarán los archivos en el servidor
-#    - compose_path: ubicación del docker-compose.yml
-#    - clone_repos: elige si quieres clonar los repositorios o usar imágenes preconstruidas
+# 1. PERSONALIZACIÓN DEL PLAYBOOK:
+#    a) Ajusta las variables básicas según tu entorno y estructura del proyecto:
+#       - project_name: Nombre de tu proyecto (se usará para nombrar directorios y configuraciones)
+#       - project_root: Ruta principal donde se almacenan los archivos de ansible
+#       - compose_path: Ruta al directorio con docker-compose.yml
+#       - clone_repos: Define si usarás imágenes precompiladas o clonarás repositorios.
+#         Si es false, se usarán imágenes Docker Hub precompiladas. Si es true, se clonarán los repositorios.
 #
-# 2. Si usas imágenes preconstruidas (recomendado para producción):
-#    - Configura service*_image con las rutas a tus imágenes Docker
+#    b) Define tus servicios:
+#       - Si usarás imágenes precompiladas (Docker Hub):
+#         Configura los service_image y service_tag.
+#         Elimina las variables de clonar repositorios.
 #
-# 3. Si necesitas variables de entorno adicionales, añádelas en additional_env_vars
+#       - Si vas a clonar repositorios:
+#         Configura los service_repo_name y service_repo_url.
+#         Elimina las variables de imágenes precompiladas.
 #
-# 4. Configura Nginx:
-#    - server_name: tu dominio
-#    - puertos y prefijos de API según tu aplicación
+#    c) Configura Nginx:
+#       - Modifica el server_name con el dominio de la VM
+#       - Configura los prefijos y puertos de tus APIs
 #
-# 5. Ejecuta el playbook:
-#    ansible-playbook deploy_ec2.yml -i inventory/hosts.ini
+# 2. EJECUCIÓN DEL PLAYBOOK:
+#    a) Ejecución básica:
+#       ansible-playbook deploy_diinf.yml -K
+#
+#    b) Especificando variables en línea de comandos:
+#       ansible-playbook deploy_diinf.yml -K -e "project_name=mi-app-web clone_repos=true"
+#
+#    c) Para ver qué haría sin ejecutar cambios:
+#       ansible-playbook deploy_diinf.yml -K --check
+#
+# 3. MANTENIMIENTO:
+#    - Para actualizar solo la configuración de Nginx:
+#      ansible-playbook deploy_diinf.yml -K --tags nginx
+#
+#    - Para actualizar las aplicaciones sin reinstalar dependencias:
+#      ansible-playbook deploy_diinf.yml -K --tags provision

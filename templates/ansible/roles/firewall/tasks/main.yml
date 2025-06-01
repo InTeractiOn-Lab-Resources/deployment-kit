@@ -1,5 +1,5 @@
 # ========================================================
-# ROL: FIREWALL (UFW) PARA ENTORNO UNIVERSITARIO
+# ROL: FIREWALL PARA VM del DIINF
 # Descripción: Configura el firewall UFW para el DIINF, permitiendo solo puertos HTTP/HTTPS
 # ========================================================
 ---
@@ -11,7 +11,7 @@
     update_cache: yes
   become: true
 
-# Permitir HTTP/HTTPS (puertos 80,443) - Requisito obligatorio para la universidad
+# Permitir HTTP/HTTPS (puertos 80,443)
 - name: Permitir tráfico HTTP (puerto 80) y HTTPS (puerto 443)
   command: ufw allow proto tcp from any to any port 80,443
   become: true

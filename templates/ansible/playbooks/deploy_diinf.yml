@@ -1,6 +1,7 @@
 # ========================================================
-# PLAYBOOK: DESPLIEGUE EN EL DIINF
-# Descripción: Configura una VM del DIINF con todos los componentes necesarios para desplegar una aplicación
+# PLAYBOOK: DESPLIEGUE EN EL DIINF o LOCAL
+# Descripción: Configura una VM del DIINF con todos los componentes necesarios para desplegar una aplicación 
+#              (también sirve para entornos locales con ubuntu)
 # ========================================================
 ---
 - name: Despliegue en VMs del DIINF
@@ -10,17 +11,31 @@
   vars:
     # CONFIGURACIÓN BÁSICA DEL PROYECTO
     # ----------------------------------
-    # Directorio raíz del proyecto en el servidor
-    project_root: "/home/{{ ansible_user }}/mi-aplicacion"
+    # Nombre del proyecto
+    project_name: "mi-aplicacion"
+    
+    # Directorio raíz del proyecto
+    project_root: "/home/usuario/mi-aplicacion"
     
     # Directorio donde está el docker-compose.yml
-    compose_path: "/home/{{ ansible_user }}/mi-aplicacion/deployment"
+    compose_path: "/home/usuario/mi-aplicacion/docker"
     
-    # Modo de despliegue (false = usar imágenes preconstruidas, true = clonar y construir)
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
     
     # CONFIGURACIÓN DE SERVICIOS DOCKER
     # ---------------------------------
+    # Imágenes Docker (cuando clone_repos = false)
+    docker_registry: ""
+    service1_image: "usuario/api-core"
+    service1_tag: "latest"
+    
+    service2_image: "usuario/api-gm" 
+    service2_tag: "latest"
+    
+    service3_image: "usuario/client-frontend"
+    service3_tag: "latest"
+
     # Repositorios para clonar (cuando clone_repos = true)
     service1_repo_name: "api-core"
     service1_repo_url: "https://github.com/usuario/api-core.git"
@@ -34,24 +49,10 @@
     config_repo_name: "deployment-config"
     config_repo_url: "https://github.com/usuario/deployment-config.git"
     
-    # Imágenes Docker (cuando clone_repos = false)
-    docker_registry: ""  # Ejemplo: "registry.example.com/" (incluir / final)
-    service1_image: "usuario/api-core"
-    service1_tag: "latest"
-    
-    service2_image: "usuario/api-gm" 
-    service2_tag: "latest"
-    
-    service3_image: "usuario/client-frontend"
-    service3_tag: "latest"
-    
     # CONFIGURACIÓN DE NGINX
-    # ---------------------
-    # Nombre para el archivo de configuración de Nginx
-    app_name: "mi-aplicacion"
-    
-    # Nombre del servidor (para la directiva server_name)
-    server_name: "{{ domains[0] | default('localhost') }}"
+    # ---------------------    
+    # Nombre del servidor
+    server_name: "felucia.diinf.usach.cl"
     
     # Configuración de puertos y rutas para Nginx
     frontend_port: "3000"
@@ -59,44 +60,7 @@
     api1_port: "3001"
     api2_prefix: "api-gm"
     api2_port: "3002"
-    
-    # Quitar la configuración default de Nginx
-    remove_default_config: true
-    
-    # Configuración de Firewall
-    configure_firewall: true
-    http_port: "80"
-    
-    # CONFIGURACIÓN GENERAL
-    # -------------------
-    # Nombre del proyecto para etiquetas
-    project_name: "mi-aplicacion"
-    
-    # Puertos a exponer en la aplicación
-    app_ports:
-      - 80
-      - 443
-      - 3000
-      - 3001
-      - 3002
-    
-    # Dominios para configurar en Nginx
-    domains:
-      - "mi-app.diinf.usach.cl"
-    
-    # Usuario del sistema que ejecutará la aplicación
-    app_user: "{{ ansible_user }}"
-    file_owner: "{{ ansible_user }}"
-    file_group: "{{ ansible_user }}"
-    
-    # Directorio para archivos de log
-    log_path: "/var/log/{{ project_name }}"
-    
-    # Configuración de SSL/TLS (si es necesario)
-    enable_ssl: false
-    ssl_cert_path: "/etc/ssl/certs/{{ project_name }}.crt"
-    ssl_key_path: "/etc/ssl/private/{{ project_name }}.key"
-  
+
   roles:
     - firewall
     - python
@@ -106,20 +70,24 @@
 
 # INSTRUCCIONES:
 # 1. PERSONALIZACIÓN DEL PLAYBOOK:
-#    a) Ajusta las variables básicas:
-#       - project_root: Ruta donde se almacenarán los archivos
+#    a) Ajusta las variables básicas según tu entorno y estructura del proyecto:
+#       - project_name: Nombre de tu proyecto (se usará para nombrar directorios y configuraciones)
+#       - project_root: Ruta principal donde se almacenan los archivos de ansible
 #       - compose_path: Ruta al directorio con docker-compose.yml
-#       - project_name: Nombre descriptivo para tu proyecto
+#       - clone_repos: Define si usarás imágenes precompiladas o clonarás repositorios.
+#         Si es false, se usarán imágenes Docker Hub precompiladas. Si es true, se clonarán los repositorios.
 #
 #    b) Define tus servicios:
-#       - Si vas a clonar repositorios (clone_repos: true):
-#         Configura service*_repo_name y service*_repo_url
+#       - Si usarás imágenes precompiladas (Docker Hub):
+#         Configura los service_image y service_tag.
+#         Elimina las variables de clonar repositorios.
 #
-#       - Si usarás imágenes precompiladas (clone_repos: false):
-#         Configura service*_image y service*_tag
+#       - Si vas a clonar repositorios:
+#         Configura los service_repo_name y service_repo_url.
+#         Elimina las variables de imágenes precompiladas.
 #
 #    c) Configura Nginx:
-#       - domains: Lista de dominios para tu aplicación
+#       - Modifica el server_name con el dominio de la VM
 #       - Configura los prefijos y puertos de tus APIs
 #
 # 2. EJECUCIÓN DEL PLAYBOOK:

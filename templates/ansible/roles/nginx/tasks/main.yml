@@ -1,4 +1,3 @@
----
 # =====================================
 # ROL: NGINX
 # Descripción: Instala y configura Nginx como reverse proxy para los microservicios
@@ -25,11 +24,69 @@
   block:
     - name: Crear archivo de Nginx para redirigir servicios
       copy:
-        dest: /etc/nginx/sites-available/{{ app_name | default('app') }}.conf
+        dest: /etc/nginx/sites-available/{{ project_name | default('app') }}.conf
         content: |
           server {
               listen 80;
-              server_name {{ server_name | default('_') }};
+              {% if server_name == "localhost" or server_name == "_" %}
+              # Configuración para entorno local (sin dominio)
+              server_name _;
+              {% else %}
+              # Configuración para entorno con dominio específico
+              server_name {{ server_name }};
+              
+              # Redirigir HTTP a HTTPS (solo en entornos con dominio)
+              {% if enable_ssl | default(false) %}
+              return 301 https://$host$request_uri;
+              {% endif %}
+              {% endif %}
+
+              # Si no hay SSL o estamos en localhost, configurar proxies aquí
+              {% if not enable_ssl | default(false) or server_name == "localhost" or server_name == "_" %}
+              # Frontend (puerto configurable)
+              location / {
+                  proxy_pass http://localhost:{{ frontend_port | default('3000') }};
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+
+              # API 1 (configurable)
+              location /{{ api1_prefix | default('api-core') }}/ {
+                  proxy_pass http://localhost:{{ api1_port | default('3001') }}/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+
+              # API 2 (configurable)
+              location /{{ api2_prefix | default('api-gm') }}/ {
+                  proxy_pass http://localhost:{{ api2_port | default('3002') }}/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+              {% endif %}
+          }
+
+          {% if enable_ssl | default(false) and server_name != "localhost" and server_name != "_" %}
+          # Servidor HTTPS (solo para entornos con dominio y SSL habilitado)
+          server {
+              listen 443 ssl;
+              server_name {{ server_name }};
+
+              # Configuración de SSL
+              ssl_certificate {{ ssl_cert_path | default('/etc/ssl/certs/' + project_name + '.crt') }};
+              ssl_certificate_key {{ ssl_key_path | default('/etc/ssl/private/' + project_name + '.key') }};
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_prefer_server_ciphers on;
+              ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
 
               # Frontend (puerto configurable)
               location / {
@@ -42,7 +99,7 @@
               }
 
               # API 1 (configurable)
-              location /{{ api1_prefix | default('api-1') }}/ {
+              location /{{ api1_prefix | default('api-core') }}/ {
                   proxy_pass http://localhost:{{ api1_port | default('3001') }}/;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -52,7 +109,7 @@
               }
 
               # API 2 (configurable)
-              location /{{ api2_prefix | default('api-2') }}/ {
+              location /{{ api2_prefix | default('api-gm') }}/ {
                   proxy_pass http://localhost:{{ api2_port | default('3002') }}/;
                   proxy_http_version 1.1;
                   proxy_set_header Upgrade $http_upgrade;
@@ -60,29 +117,30 @@
                   proxy_set_header Host $host;
                   proxy_cache_bypass $http_upgrade;
               }
-
-              # Puedes añadir más bloques location según sea necesario
           }
+          {% endif %}
         owner: root
         group: root
         mode: '0644'
       become: true
+      notify: Reiniciar Nginx
 
     # Habilitar la configuración
     - name: Habilitar configuración en sites-enabled
       file:
-        src: /etc/nginx/sites-available/{{ app_name | default('app') }}.conf
-        dest: /etc/nginx/sites-enabled/{{ app_name | default('app') }}.conf
+        src: /etc/nginx/sites-available/{{ project_name | default('app') }}.conf
+        dest: /etc/nginx/sites-enabled/{{ project_name | default('app') }}.conf
         state: link
       become: true
+      notify: Reiniciar Nginx
 
-    # Eliminar configuración default (opcional)
+    # Eliminar configuración default (siempre)
     - name: Eliminar configuración default de Nginx
       file:
         path: /etc/nginx/sites-enabled/default
         state: absent
       become: true
-      when: remove_default_config | default(true)
+      notify: Reiniciar Nginx
 
     # Verificar la configuración
     - name: Verificar configuración de Nginx
@@ -91,19 +149,3 @@
       changed_when: false
       failed_when: nginx_test.rc != 0
       become: true
-
-    # Recargar Nginx para aplicar cambios
-    - name: Recargar Nginx para aplicar nueva configuración
-      service:
-        name: nginx
-        state: reloaded
-      become: true
-
-# Configurar firewall para permitir tráfico HTTP
-- name: Asegurar que el firewall permita tráfico HTTP
-  ufw:
-    rule: allow
-    port: "{{ http_port | default('80') }}"
-    proto: tcp
-  become: true
-  when: configure_firewall | default(true)

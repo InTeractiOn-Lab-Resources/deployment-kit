@@ -4,15 +4,6 @@
 # Descripción: Clona repositorios y construye imágenes Docker localmente
 # =====================================
 
-# Crear directorio base del proyecto
-- name: Crear directorio del proyecto si no existe
-  file:
-    path: "{{ project_root }}"
-    state: directory
-    owner: "{{ file_owner | default(ansible_user_id) }}"
-    group: "{{ file_group | default(ansible_user_id) }}"
-    mode: '0755'
-
 # Definir listado de repositorios a clonar
 # NOTA: Reemplaza esta variable con los repositorios que necesites
 - name: Repositorios a clonar
@@ -26,7 +17,6 @@
         url: "{{ service3_repo_url }}"
       - name: "{{ config_repo_name | default('config') }}"
         url: "{{ config_repo_url }}"
-  when: service1_repo_url is defined and service2_repo_url is defined and service3_repo_url is defined and config_repo_url is defined
 
 # Clonar o actualizar repositorios
 - name: Clonar o actualizar repositorios
@@ -45,7 +35,7 @@
       git:
         repo: "{{ item.item.url }}"
         dest: "{{ project_root }}/{{ item.item.name }}"
-        version: "{{ item.item.branch | default('main') }}"
+        version: main
       when: not item.stat.exists
       loop: "{{ repo_stat.results }}"
       loop_control:
@@ -57,7 +47,7 @@
       git:
         repo: "{{ item.item.url }}"
         dest: "{{ project_root }}/{{ item.item.name }}"
-        version: "{{ item.item.branch | default('main') }}"
+        version: main
         update: yes
         force: yes
       when: item.stat.exists
@@ -67,6 +57,7 @@
       register: update_result
 
 # Crear archivo .env para docker-compose con rutas locales
+# NOTA: Agrega o reemplaza con las variables con lo que necesites
 - name: Crear archivo .env con rutas locales
   copy:
     dest: "{{ compose_path }}/.env"
@@ -76,10 +67,10 @@
       SERVICE2_PATH={{ project_root }}/{{ service2_repo_name }}
       SERVICE3_PATH={{ project_root }}/{{ service3_repo_name }}
       
-      # Variables adicionales
+      # Variables adicionales (bases de datos, configuración, etc.)
       {{ additional_env_vars | default('') }}
-    owner: "{{ file_owner | default(ansible_user_id) }}"
-    group: "{{ file_group | default(ansible_user_id) }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
     mode: '0644'
 
 # Determinar si se requiere reconstruir imágenes
