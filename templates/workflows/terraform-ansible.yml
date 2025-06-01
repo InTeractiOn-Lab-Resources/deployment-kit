@@ -23,13 +23,6 @@ on:
         default: false
         type: boolean
 
-  # Opcional: Ejecución automática en push a main/master
-  # push:
-  #   branches: [ main ]
-  #   paths:
-  #     - 'terraform/**'
-  #     - 'ansible/**'
-
 # Define los trabajos del workflow
 jobs:
   # TRABAJO 1: CREACIÓN DE INFRAESTRUCTURA CON TERRAFORM
