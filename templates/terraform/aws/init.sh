@@ -20,11 +20,6 @@ apt-get install -y \
 # Configurar zona horaria
 timedatectl set-timezone UTC
 
-# Opcional: Instalar Docker
-# curl -fsSL https://get.docker.com -o get-docker.sh
-# sh get-docker.sh
-# usermod -aG docker ubuntu
-
 # Configurar un mensaje de bienvenida
 echo "Instancia configurada por Terraform - $(date)" > /etc/motd
 

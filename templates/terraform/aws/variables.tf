@@ -31,8 +31,6 @@ variable "instance_type" {
 variable "inline_public_key" {
   description = "Clave SSH pública para acceder a la instancia"
   type        = string
-  # NOTA: No incluir un valor por defecto aquí por seguridad.
-  # Proporcionar la clave mediante variables de entorno o archivo tfvars.
 }
 
 # Nombre base para los recursos (prefijo)
@@ -57,8 +55,7 @@ variable "tags" {
 variable "ingress_ports" {
   description = "Lista de puertos a abrir en el security group"
   type        = list(number)
-  default     = [22, 80, 443, 3000, 3001, 3002]
-  # 22: SSH, 80: HTTP, 443: HTTPS, 3000-3002: Aplicaciones
+  default     = [80, 443]
 }
 
 # Configuración de disco EBS

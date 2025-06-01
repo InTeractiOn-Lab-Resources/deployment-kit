@@ -95,13 +95,13 @@ resource "aws_instance" "app_instance" {
     }
   }
 
-  # Advertencia: Espera a que la instancia esté completamente inicializada
   depends_on = [
     aws_security_group.app_sg
   ]
 }
 
 # Opción: Crear una IP elástica (comentada por defecto)
+# Para habilitar, quita los símbolos de comentario /* */
 /*
 resource "aws_eip" "app_eip" {
   domain   = "vpc"
