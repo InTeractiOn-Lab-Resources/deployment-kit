@@ -9,18 +9,17 @@ provider "aws" {
 }
 
 # Par de claves SSH para acceder a la instancia
-# El key_name debe ser único para evitar colisiones
 resource "aws_key_pair" "default" {
   key_name = "key-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   public_key = var.inline_public_key
 }
 
 # Definición de la instancia EC2
-resource "aws_instance" "sandbox" {
+resource "aws_instance" "app" {
   ami           = var.ami_id            # ID de la AMI (Ubuntu 22.04 por defecto)
   instance_type = var.instance_type     # Tipo de instancia (t2.micro por defecto)
   key_name      = aws_key_pair.default.key_name
-  vpc_security_group_ids = [aws_security_group.sandbox_sg.id]
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
 
   tags = {
     Name = "apicore-gm-client-instance"           # Nombre visible en la consola AWS
@@ -28,9 +27,9 @@ resource "aws_instance" "sandbox" {
 }
 
 # Grupo de seguridad para controlar el tráfico de red
-resource "aws_security_group" "sandbox_sg" {
+resource "aws_security_group" "app_sg" {
   name        = "apicore-gm-client-security-group"
-  description = "Allow SSH and HTTP access"
+  description = "Allow SSH, HTTP and HTTPS access"
 
   # Regla para permitir conexiones SSH
   ingress {
@@ -38,7 +37,7 @@ resource "aws_security_group" "sandbox_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]         # Por seguridad, restringe a tu IP en producción
+    cidr_blocks = ["0.0.0.0/0"]         # Esto es necesario para conectarse con GitHub Actions, despues se debe restringir manualmente.
   }
 
   # Regla para permitir tráfico HTTP
@@ -46,6 +45,15 @@ resource "aws_security_group" "sandbox_sg" {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Regla para permitir tráfico HTTPS
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
