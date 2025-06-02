@@ -96,7 +96,7 @@ jobs:
           ansible-playbook playbooks/deploy_ec2.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
-            --private-key ../../private_key.pem \
+            --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no"
       
       # Paso 5: Eliminar la clave SSH
