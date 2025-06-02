@@ -2,7 +2,7 @@
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
 # Descripción: Crea infraestructura en AWS y despliega aplicaciones
 # ========================================================
-name: Despliegue Automatizado AWS
+name: Despliegue de APICore, APIGM y Client en AWS
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -96,6 +96,7 @@ jobs:
             --user ubuntu \
             --private-key ../../private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no"
+            -e "ansible_roles_path=../roles"
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
