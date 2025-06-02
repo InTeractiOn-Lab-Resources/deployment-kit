@@ -95,8 +95,8 @@ jobs:
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
             --private-key ../../private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no"
-            -e "ansible_roles_path=../roles"
+            --ssh-extra-args "-o StrictHostKeyChecking=no" \
+            --roles-path ./roles
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
