@@ -1,0 +1,88 @@
+---
+# =====================================
+# ROL: PROVISION - CLONAR REPOSITORIOS
+# Descripción: Clona repositorios y construye imágenes Docker localmente
+# =====================================
+
+# Definir listado de repositorios a clonar
+# NOTA: Reemplaza esta variable con los repositorios que necesites
+- name: Repositorios a clonar
+  set_fact:
+    repos:
+      - name: "{{ service1_repo_name }}"
+        url: "{{ service1_repo_url }}"
+      - name: "{{ service2_repo_name }}"
+        url: "{{ service2_repo_url }}"
+      - name: "{{ service3_repo_name }}"
+        url: "{{ service3_repo_url }}"
+      - name: "{{ config_repo_name | default('config') }}"
+        url: "{{ config_repo_url }}"
+
+# Clonar o actualizar repositorios
+- name: Clonar o actualizar repositorios
+  block:
+    # Verificar si el repositorio ya existe
+    - name: Verificar si el repositorio ya está clonado
+      stat:
+        path: "{{ project_root }}/{{ item.name }}/.git"
+      register: repo_stat
+      loop: "{{ repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # Clonar repositorio si no existe
+    - name: Clonar el repositorio si no existe
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: main
+      when: not item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      register: clone_result
+
+    # Actualizar repositorio si ya existe
+    - name: Actualizar el repositorio si ya existe
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: main
+        update: yes
+        force: yes
+      when: item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      register: update_result
+
+# Crear archivo .env para docker-compose con rutas locales
+# NOTA: Agrega o reemplaza con las variables con lo que necesites
+- name: Crear archivo .env con rutas locales
+  copy:
+    dest: "{{ compose_path }}/.env"
+    content: |
+      # Rutas a los repositorios locales
+      SERVICE1_PATH={{ project_root }}/{{ service1_repo_name }}
+      SERVICE2_PATH={{ project_root }}/{{ service2_repo_name }}
+      SERVICE3_PATH={{ project_root }}/{{ service3_repo_name }}
+      
+      # Variables adicionales (bases de datos, configuración, etc.)
+      {{ additional_env_vars | default('') }}
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    mode: '0644'
+
+# Determinar si se requiere reconstruir imágenes
+- name: Determinar si se requiere build
+  set_fact:
+    repos_updated: >-
+      {{ (clone_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0)
+         or (update_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0) }}
+
+# Construir imágenes si hubo cambios
+- name: Reconstruir contenedores si hubo cambios en los repos
+  command: docker compose build
+  args:
+    chdir: "{{ compose_path }}"
+  when: repos_updated | default(false)

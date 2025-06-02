@@ -1,0 +1,136 @@
+# ========================================================
+# WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
+# Descripción: Crea infraestructura en AWS y despliega aplicaciones
+# ========================================================
+name: Despliegue Automatizado AWS
+
+on:
+  workflow_dispatch:  # Se ejecuta manualmente desde GitHub
+    inputs:
+      deployment_dir:
+        description: 'Directorio principal de despliegue'
+        required: true
+        default: 'deployments/apicore-gm-client'
+
+jobs:
+  # TRABAJO 1: CREAR INFRAESTRUCTURA CON TERRAFORM
+  create-infrastructure:
+    name: Crear Infraestructura AWS
+    runs-on: ubuntu-latest
+
+    # Variables de entorno necesarias
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY }}
+
+    # Directorio donde está la configuración de Terraform
+    defaults:
+      run:
+        working-directory: ${{ github.event.inputs.deployment_dir }}/terraform
+
+    # Valores que se pasarán al siguiente job
+    outputs:
+      instance_ip: ${{ steps.extract.outputs.instance_ip }}
+
+    steps:
+      # Paso 1: Obtener el código
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # Paso 3: Inicializar Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # Paso 4: Validar la configuración
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Paso 5: Crear un plan
+      - name: Terraform Plan
+        run: terraform plan
+
+      # Paso 6: Aplicar configuración (crear recursos)
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      # Paso 7: Obtener IP de la instancia creada
+      - name: Extract Public IP
+        id: extract
+        run: |
+          echo "instance_ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
+
+  # TRABAJO 2: CONFIGURAR LA INSTANCIA CON ANSIBLE
+  provision-instance:
+    name: Configurar Instancia con Ansible
+    needs: create-infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Instalar Ansible
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      # Paso 2: Obtener el código
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 3: Preparar clave SSH para conexión
+      - name: Write SSH Private Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      # Paso 4: Ejecutar Ansible para configurar la instancia
+      - name: Run Ansible Playbook
+        run: |
+          cd ${{ github.event.inputs.deployment_dir }}/ansible && \
+          ansible-playbook playbooks/deploy_ec2.yml \
+            -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
+            --user ubuntu \
+            --private-key ../../private_key.pem \
+            --ssh-extra-args "-o StrictHostKeyChecking=no"
+      
+      # Paso 5: Eliminar la clave SSH
+      - name: Cleanup SSH Key
+        run: rm -f private_key.pem
+
+# INSTRUCCIONES DE USO:
+# 
+# 1. PREPARACIÓN:
+#    a) Crea estos SECRETOS en tu repositorio (Settings > Secrets > Actions):
+#       - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
+#       - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
+#       - INLINE_PUBLIC_KEY: Contenido de tu archivo ~/.ssh/id_rsa.pub
+#       - SSH_PRIVATE_KEY: Contenido de tu archivo ~/.ssh/id_rsa
+#
+#    b) Organiza tu repositorio con esta estructura para los archivos de despliegue:
+#       /{directorio_principal}/    (Ej: deployments/app)
+#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
+#          /ansible/         - Directorio base de Ansible
+#             /playbooks/    - Contiene el playbook deploy_ec2.yml
+#
+#    c) Modifica el valor por defecto del directorio principal si es necesario:
+#       - Edita el archivo workflow y cambia 'deployments/app' 
+#         por la ruta que utilizarás para tu proyecto
+#
+# 2. EJECUCIÓN:
+#    a) Ve a la pestaña "Actions" en GitHub
+#    b) Selecciona "Despliegue Automatizado AWS"
+#    c) Haz clic en "Run workflow" para iniciar el despliegue
+#
+# 3. RESULTADOS:
+#    - En los logs verás la IP pública de tu instancia
+#    - Podrás acceder a tu aplicación en: http://IP-DE-INSTANCIA
+#    - Para SSH: ssh -i ~/.ssh/id_rsa ubuntu@IP-DE-INSTANCIA
+#
+# 4. SEGURIDAD (IMPORTANTE):
+#    - Una vez desplegado, limita los puertos abiertos en el Security Group
+#      dejando solo HTTP (80), HTTPS (443) y SSH (22) desde tu IP, o elimina el puerto SSH si no lo necesitas.
+#    - Actualiza regularmente tu instancia con: sudo apt update && sudo apt upgrade

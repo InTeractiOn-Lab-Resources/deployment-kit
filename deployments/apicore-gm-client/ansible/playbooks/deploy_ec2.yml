@@ -1,0 +1,115 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN AWS
+# Descripción: Configura una instancia EC2 de AWS para ejecutar la aplicación
+# =====================================
+
+- name: Despliegue en instancia EC2 AWS
+  hosts: all
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "apicore-gm-client"
+    
+    # Directorio raíz del proyecto
+    project_root: "/home/ubuntu/deployment-kit/deployments/apicore-gm-client"
+    
+    # Directorio donde está el docker-compose.yml
+    compose_path: "/home/ubuntu/deployment-kit/deployments/apicore-gm-client"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: false
+
+    # Si clone_repos = false, elige cómo obtener docker-compose.yml y otros archivos:
+    # true = copiar archivos de despleigue desde este repositorio
+    # false = clonar un repositorio externo que tenga los archivos de despliegue
+    use_local_files: false
+    
+    # Directorio local donde están los archivos a copiar (donde esta el docker-compose.yml)
+    local_files_dir: "deployments/apicore-gm-client/"
+    
+    # Archivos adicionales a copiar
+    additional_files:
+      - "init.sql"
+    
+    # Si prefieres clonar un repositorio para obtener los archivos:
+    config_repo_url: "https://github.com/infra-sandbox/deployment-kit.git"
+    config_repo_name: "deployment-kit"
+    config_repo_branch: "main"
+    
+    # CONFIGURACIÓN DE SERVICIOS DOCKER
+    # ---------------------------------
+    # Imágenes Docker (cuando clone_repos = false)
+    docker_registry: ""
+    service1_image: "thecariah/api-core-test"
+    service1_tag: "latest"
+    
+    service2_image: "thecariah/api-gm-test" 
+    service2_tag: "latest"
+    
+    service3_image: "thecariah/client-test"
+    service3_tag: "latest"
+
+    # Variables adicionales para el .env (opcional)
+    additional_env_vars: |
+      INIT_SQL_PATH={{ compose_path }}/init.sql
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor
+    server_name: "_"
+    
+    # Configuración de puertos y rutas para Nginx
+    frontend_port: "3000"
+    api1_prefix: "api-core"
+    api1_port: "3001"
+    api2_prefix: "api-gm"
+    api2_port: "3002"
+    
+  roles:
+    - python
+    - docker
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 1. PERSONALIZACIÓN DEL PLAYBOOK:
+#    a) Ajusta las variables básicas según tu entorno y estructura del proyecto:
+#       - project_name: Nombre de tu proyecto (se usará para nombrar directorios y configuraciones)
+#       - project_root: Ruta principal donde se almacenan los archivos de ansible
+#       - compose_path: Ruta al directorio con docker-compose.yml
+#       - clone_repos: Define si usarás imágenes precompiladas o clonarás repositorios.
+#         Si es false, se usarán imágenes Docker Hub precompiladas. Si es true, se clonarán los repositorios.
+#
+#    b) Define tus servicios:
+#       - Si usarás imágenes precompiladas (Docker Hub):
+#         Configura los service_image y service_tag.
+#         Elimina las variables de clonar repositorios.
+#
+#       - Si vas a clonar repositorios:
+#         Configura los service_repo_name y service_repo_url.
+#         Elimina las variables de imágenes precompiladas.
+#
+#    c) Configura Nginx:
+#       - Modifica el server_name con el dominio de la VM
+#       - Configura los prefijos y puertos de tus APIs
+#
+# 2. EJECUCIÓN DEL PLAYBOOK:
+#    a) Ejecución básica:
+#       ansible-playbook deploy_diinf.yml -K
+#
+#    b) Especificando variables en línea de comandos:
+#       ansible-playbook deploy_diinf.yml -K -e "project_name=mi-app-web clone_repos=true"
+#
+#    c) Para ver qué haría sin ejecutar cambios:
+#       ansible-playbook deploy_diinf.yml -K --check
+#
+# 3. MANTENIMIENTO:
+#    - Para actualizar solo la configuración de Nginx:
+#      ansible-playbook deploy_diinf.yml -K --tags nginx
+#
+#    - Para actualizar las aplicaciones sin reinstalar dependencias:
+#      ansible-playbook deploy_diinf.yml -K --tags provision

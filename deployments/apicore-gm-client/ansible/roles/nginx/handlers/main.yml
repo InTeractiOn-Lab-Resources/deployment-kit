@@ -1,0 +1,12 @@
+---
+# =====================================
+# ROL: NGINX - HANDLERS
+# Descripción: Manejadores para el servicio Nginx
+# =====================================
+
+# Reiniciar el servicio Nginx
+- name: Reiniciar Nginx
+  service:
+    name: nginx
+    state: restarted
+  become: true
