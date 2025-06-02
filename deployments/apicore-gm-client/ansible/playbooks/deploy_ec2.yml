@@ -37,7 +37,6 @@
     
     # Si prefieres clonar un repositorio para obtener los archivos:
     config_repo_url: "https://github.com/infra-sandbox/deployment-kit.git"
-    config_repo_name: "deployment-kit"
     config_repo_branch: "main"
     
     # CONFIGURACIÓN DE SERVICIOS DOCKER
