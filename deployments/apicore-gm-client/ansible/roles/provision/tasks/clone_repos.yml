@@ -5,7 +5,6 @@
 # =====================================
 
 # Definir listado de repositorios a clonar
-# NOTA: Reemplaza esta variable con los repositorios que necesites
 - name: Repositorios a clonar
   set_fact:
     repos:
@@ -57,10 +56,9 @@
       register: update_result
 
 # Crear archivo .env para docker-compose con rutas locales
-# NOTA: Agrega o reemplaza con las variables con lo que necesites
 - name: Crear archivo .env con rutas locales
   copy:
-    dest: "{{ compose_path }}/.env"
+    dest: "{{ project_root }}/.env"
     content: |
       # Rutas a los repositorios locales
       SERVICE1_PATH={{ project_root }}/{{ service1_repo_name }}
@@ -84,5 +82,5 @@
 - name: Reconstruir contenedores si hubo cambios en los repos
   command: docker compose build
   args:
-    chdir: "{{ compose_path }}"
+    chdir: "{{ project_root }}"
   when: repos_updated | default(false)

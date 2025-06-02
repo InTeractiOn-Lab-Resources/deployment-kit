@@ -4,10 +4,10 @@
 # Descripción: Descarga imágenes Docker preconstruidas y configura el despliegue
 # =====================================
 
-# Crear directorio de docker-compose si no existe
-- name: Asegurar que existe el directorio para docker-compose
+# Crear directorio del proyecto si no existe
+- name: Asegurar que existe el directorio del proyecto
   file:
-    path: "{{ compose_path }}"
+    path: "{{ project_root }}"
     state: directory
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
@@ -28,7 +28,7 @@
 - name: Copiar docker-compose.yml desde el repositorio local
   copy:
     src: "{{ local_files_dir | default(playbook_dir + '/../files') }}/docker-compose.yml"
-    dest: "{{ compose_path }}/docker-compose.yml"
+    dest: "{{ project_root }}/docker-compose.yml"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
@@ -38,7 +38,7 @@
 - name: Copiar archivos adicionales si existen
   copy:
     src: "{{ local_files_dir | default(playbook_dir + '/../files') }}/{{ item }}"
-    dest: "{{ compose_path }}/{{ item }}"
+    dest: "{{ project_root }}/{{ item }}"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
@@ -58,7 +58,7 @@
 - name: Copiar docker-compose.yml desde el repositorio clonado
   copy:
     src: "{{ project_root }}/{{ config_repo_name | default('config') }}/{{ config_files_dir | default('') }}docker-compose.yml"
-    dest: "{{ compose_path }}/docker-compose.yml"
+    dest: "{{ project_root }}/docker-compose.yml"
     remote_src: yes
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
@@ -68,9 +68,9 @@
 # Crear archivo .env con las variables necesarias para docker-compose
 - name: Crear archivo .env con rutas necesarias
   copy:
-    dest: "{{ compose_path }}/.env"
+    dest: "{{ project_root }}/.env"
     content: |
-      # Variables para las imágenes de servicios (formato estándar, cambiar variables según sea necesario)
+      # Variables para las imágenes de servicios
       API_CORE_IMAGE={{ docker_registry | default('') }}{{ service1_image }}:{{ service1_tag | default('latest') }}
       API_GM_IMAGE={{ docker_registry | default('') }}{{ service2_image }}:{{ service2_tag | default('latest') }}
       CLIENT_IMAGE={{ docker_registry | default('') }}{{ service3_image }}:{{ service3_tag | default('latest') }}
@@ -86,5 +86,6 @@
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
   args:
-    chdir: "{{ compose_path }}"
+    chdir: "{{ project_root }}"
   changed_when: true
+  

@@ -14,19 +14,11 @@
     # Nombre del proyecto
     project_name: "apicore-gm-client"
     
-    # Directorio raíz del proyecto
-    project_root: "/home/ubuntu/deployment-kit/deployments/apicore-gm-client"
-    
-    # Directorio donde está el docker-compose.yml
-    compose_path: "/home/ubuntu/deployment-kit/deployments/apicore-gm-client"
+    # Directorio raíz del proyecto (donde irán todos los archivos de Ansible)
+    project_root: "/home/ubuntu/{{ project_name}}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
-
-    # Si clone_repos = false, elige cómo obtener docker-compose.yml y otros archivos:
-    # true = copiar archivos de despleigue desde este repositorio
-    # false = clonar un repositorio externo que tenga los archivos de despliegue
-    use_local_files: false
     
     # Directorio local donde están los archivos a copiar (donde esta el docker-compose.yml)
     local_files_dir: "deployments/apicore-gm-client/"
@@ -34,12 +26,6 @@
     # Archivos adicionales a copiar
     additional_files:
       - "init.sql"
-    
-    # Si prefieres clonar un repositorio para obtener los archivos:
-    config_repo_url: "https://github.com/infra-sandbox/deployment-kit.git"
-    config_repo_name: "deployment-kit"
-    config_repo_branch: "main"
-    config_files_dir: "deployments/apicore-gm-client/"
     
     # CONFIGURACIÓN DE SERVICIOS DOCKER
     # ---------------------------------
@@ -56,7 +42,7 @@
 
     # Variables adicionales para el .env (opcional)
     additional_env_vars: |
-      INIT_SQL_PATH={{ compose_path }}/init.sql
+      INIT_SQL_PATH={{ project_root }}/init.sql
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
