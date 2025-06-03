@@ -45,12 +45,12 @@
         
       Endpoints:
         - Frontend: http://{{ server_name if server_name != "_" else "localhost" }}
-        - API Core: http://{{ server_name if server_name != "_" else "localhost" }}/{{ api1_prefix | default('api-core') }}
-        - API GM: http://{{ server_name if server_name != "_" else "localhost" }}/{{ api2_prefix | default('api-gm') }}
+      {% for service in services %}
+      {% if service.type == 'api' and service.api_prefix is defined %}
+        - {{ service.name | capitalize }}: http://{{ server_name if server_name != "_" else "localhost" }}/{{ service.api_prefix }}
+      {% endif %}
+      {% endfor %}
       
       Para verificar logs:
         - docker logs [nombre_contenedor]
       ==========================================================
-  tags:
-    - provision
-    - status

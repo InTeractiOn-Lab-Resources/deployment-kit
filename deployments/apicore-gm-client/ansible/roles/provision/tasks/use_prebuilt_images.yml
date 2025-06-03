@@ -15,11 +15,8 @@
 
 # Descargar imágenes Docker desde el registro (Docker Hub u otro)
 - name: Descargar imágenes Docker preconstruidas
-  command: docker pull {{ item }}
-  loop:
-    - "{{ docker_registry | default('') }}{{ service1_image }}:{{ service1_tag | default('latest') }}"
-    - "{{ docker_registry | default('') }}{{ service2_image }}:{{ service2_tag | default('latest') }}"
-    - "{{ docker_registry | default('') }}{{ service3_image }}:{{ service3_tag | default('latest') }}"
+  command: docker pull {{ docker_registry | default('') }}{{ item.image }}:{{ item.tag | default('latest') }}
+  loop: "{{ services }}"
   changed_when: true
   failed_when: false
 
@@ -31,7 +28,7 @@
   delegate_to: localhost
   become: false
 
-# Mostrar información de depuración (útil para diagnóstico)
+# Mostrar información de las rutas de los archivos necesarios
 - name: Mostrar información de depuración
   debug:
     msg: 
@@ -39,6 +36,7 @@
       - "Archivo docker-compose.yml existe: {{ docker_compose_stat.stat.exists | default('desconocido') }}"
       - "Workspace root: {{ workspace_root | default('no definido') }}"
       - "Deployment dir: {{ deployment_dir | default('no definido') }}"
+      - "Servicios definidos: {{ services | length }}"
 
 # Copiar docker-compose desde el repositorio local
 - name: Copiar docker-compose.yml desde el repositorio local
@@ -60,18 +58,35 @@
   loop: "{{ additional_files | default([]) }}"
   ignore_errors: yes  # Continuar si algún archivo no existe
 
-# Crear archivo .env con las variables necesarias para docker-compose
-- name: Crear archivo .env con rutas necesarias
+# Generar el contenido del .env para los servicios
+- name: Generar el contenido del archivo .env
+  set_fact:
+    env_vars_content: |
+      # Variables para las imágenes de servicios
+      {% for service in services %}
+      {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
+      {% endfor %}
+      
+      # Variables globales
+      {% for key, value in global_env_vars.items() %}
+      {{ key }}={{ value }}
+      {% endfor %}
+      
+      # Variables específicas por servicio
+      {% for service in services %}
+      {% if service.env_vars is defined %}
+      # {{ service.name | capitalize }} Variables
+      {% for key, value in service.env_vars.items() %}
+      {{ key }}={{ value }}
+      {% endfor %}
+      {% endif %}
+      {% endfor %}
+
+# Crear archivo .env con variables de entorno dinámicas
+- name: Crear archivo .env con variables de entorno
   copy:
     dest: "{{ project_root }}/.env"
-    content: |
-      # Variables para las imágenes de servicios
-      API_CORE_IMAGE={{ docker_registry | default('') }}{{ service1_image }}:{{ service1_tag | default('latest') }}
-      API_GM_IMAGE={{ docker_registry | default('') }}{{ service2_image }}:{{ service2_tag | default('latest') }}
-      CLIENT_IMAGE={{ docker_registry | default('') }}{{ service3_image }}:{{ service3_tag | default('latest') }}
-      
-      # Variables adicionales (bases de datos, configuración, etc.)
-      {{ additional_env_vars | default('') }}
+    content: "{{ env_vars_content }}"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'

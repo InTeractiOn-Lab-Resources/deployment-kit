@@ -15,50 +15,76 @@
     project_name: "apicore-gm-client"
     
     # Directorio raíz del proyecto
-    project_root: "/home/ubuntu/{{ project_name}}"
+    project_root: "/home/ubuntu/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
 
     # Variables para localizar archivos (pasadas desde el workflow)
-    workspace_root: "{{ workspace_root }}"
-    deployment_dir: "{{ deployment_dir }}"
+    workspace_root: "{{ workspace_root | default(playbook_dir + '/../../..') }}"
+    deployment_dir: "{{ deployment_dir | default('deployments/apicore-gm-client') }}"
     
-    # Directorio local donde están los archivos a copiar (donde esta el docker-compose.yml y otros archivos necesarios)
+    # Directorio local donde están los archivos a copiar (docker-compose.yml y otros archivos necesarios)
     local_files_dir: "{{ workspace_root }}/{{ deployment_dir }}"
     
     # Archivos adicionales a copiar
     additional_files:
       - "init.sql"
     
-    # CONFIGURACIÓN DE SERVICIOS DOCKER
-    # ---------------------------------
-    # Imágenes Docker (cuando clone_repos = false)
+    # CONFIGURACIÓN DE SERVICIOS
+    # --------------------------
+    # Prefijo común para las imágenes Docker (si se deja vacío se asume Docker Hub)
     docker_registry: ""
-    service1_image: "thecariah/api-core-test"
-    service1_tag: "latest"
     
-    service2_image: "thecariah/api-gm-test" 
-    service2_tag: "latest"
-    
-    service3_image: "thecariah/client-test"
-    service3_tag: "latest"
+    # Definición de servicios
+    services:
+      - name: "core"                     # Nombre interno del servicio
+        type: "api"                      # Tipo: api o frontend
+        image: "thecariah/api-core-test" # Imagen Docker
+        tag: "latest"                    # Tag de la imagen
+        port: 3001                       # Puerto en el host
+        container_port: 3001             # Puerto dentro del contenedor (opcional, si es diferente)
+        env_var: "API_CORE_IMAGE"        # Nombre de variable para el .env
+        api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
+      
+      - name: "gm"
+        type: "api"
+        image: "thecariah/api-gm-test"
+        tag: "latest"
+        port: 3002
+        env_var: "API_GM_IMAGE"
+        api_prefix: "api-gm"
+      
+      - name: "client"
+        type: "frontend"
+        image: "thecariah/client-test"
+        tag: "latest"
+        port: 3000
+        env_var: "CLIENT_IMAGE"
+      
+      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   type: "api"
+      #   image: "nueva/imagen"
+      #   tag: "v1"
+      #   port: 3003
+      #   env_var: "NUEVO_SERVICIO_IMAGE"
+      #   api_prefix: "nuevo-api"
 
-    # Variables adicionales para el .env (opcional)
-    additional_env_vars: |
-      INIT_SQL_PATH={{ project_root }}/init.sql
+    # Variables globales de entorno para todos los servicios
+    global_env_vars:
+      INIT_SQL_PATH: "{{ project_root }}/init.sql"
+      # Otras variables globales que necesites
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
-    # Nombre del servidor
+    # Nombre del servidor (dominio o _ para cualquier dominio)
     server_name: "_"
     
-    # Configuración de puertos y rutas para Nginx
-    frontend_port: "3000"
-    api1_prefix: "api-core"
-    api1_port: "3001"
-    api2_prefix: "api-gm"
-    api2_port: "3002"
+    # Para SSL (opcional, solo si tienes dominio)
+    enable_ssl: false
+    # ssl_cert_path: "/etc/ssl/certs/mi-certificado.crt"
+    # ssl_key_path: "/etc/ssl/private/mi-clave.key"
     
   roles:
     - python
@@ -66,41 +92,28 @@
     - nginx
     - provision
 
-# INSTRUCCIONES:
-# 1. PERSONALIZACIÓN DEL PLAYBOOK:
-#    a) Ajusta las variables básicas según tu entorno y estructura del proyecto:
-#       - project_name: Nombre de tu proyecto (se usará para nombrar directorios y configuraciones)
-#       - project_root: Ruta principal donde se almacenan los archivos de ansible
-#       - compose_path: Ruta al directorio con docker-compose.yml
-#       - clone_repos: Define si usarás imágenes precompiladas o clonarás repositorios.
-#         Si es false, se usarán imágenes Docker Hub precompiladas. Si es true, se clonarán los repositorios.
+# INSTRUCCIONES PARA DESARROLLADORES:
+# ==================================
 #
-#    b) Define tus servicios:
-#       - Si usarás imágenes precompiladas (Docker Hub):
-#         Configura los service_image y service_tag.
-#         Elimina las variables de clonar repositorios.
+# 1. CÓMO AÑADIR UN NUEVO SERVICIO:
+#    Copia uno de los bloques de servicio existentes y modifica sus valores.
+#    Ejemplo:
 #
-#       - Si vas a clonar repositorios:
-#         Configura los service_repo_name y service_repo_url.
-#         Elimina las variables de imágenes precompiladas.
+#    - name: "nuevo-servicio"          # Nombre único del servicio
+#      type: "api"                     # Tipo: api, frontend o database
+#      image: "usuario/nueva-imagen"   # Imagen Docker
+#      tag: "latest"                   # Tag de la imagen
+#      port: 3003                      # Puerto en el host
+#      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable en el .env
+#      api_prefix: "nuevo-api"         # Ruta de API (solo para servicios tipo api)
+#      env_vars:                       # Variables de entorno específicas
+#        VARIABLE1: "valor1"
+#        VARIABLE2: "valor2"
 #
-#    c) Configura Nginx:
-#       - Modifica el server_name con el dominio de la VM
-#       - Configura los prefijos y puertos de tus APIs
+# 2. VARIABLES DE ENTORNO:
+#    - Específicas de un servicio: Añádelas dentro de env_vars en el servicio
+#    - Globales para todos: Añádelas en global_env_vars
 #
-# 2. EJECUCIÓN DEL PLAYBOOK:
-#    a) Ejecución básica:
-#       ansible-playbook deploy_diinf.yml -K
-#
-#    b) Especificando variables en línea de comandos:
-#       ansible-playbook deploy_diinf.yml -K -e "project_name=mi-app-web clone_repos=true"
-#
-#    c) Para ver qué haría sin ejecutar cambios:
-#       ansible-playbook deploy_diinf.yml -K --check
-#
-# 3. MANTENIMIENTO:
-#    - Para actualizar solo la configuración de Nginx:
-#      ansible-playbook deploy_diinf.yml -K --tags nginx
-#
-#    - Para actualizar las aplicaciones sin reinstalar dependencias:
-#      ansible-playbook deploy_diinf.yml -K --tags provision
+# 3. CONFIGURACIÓN DE NGINX:
+#    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix
+#    - Un único servicio tipo "frontend" será accesible en la ruta raíz (/)
