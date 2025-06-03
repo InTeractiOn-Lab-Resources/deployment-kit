@@ -92,18 +92,29 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: roles
         run: |
-          cd ${{ github.event.inputs.deployment_dir }}/ansible && \
+          cd ${{ github.event.inputs.deployment_dir }}/ansible 
+          
+          # Crear archivo de variables dinámicamente
+          cat > vars.yml << EOF
+          ---
+          workspace_root: ${{ github.workspace }}
+          deployment_dir: ${{ github.event.inputs.deployment_dir }}
+          
+          # Variables de base de datos (Modificar según tus secretos)
+          postgres_user: ${{ secrets.POSTGRES_USER }}
+          postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          postgres_db: ${{ secrets.POSTGRES_DB }}
+          mongo_username: ${{ secrets.MONGO_USERNAME }}
+          mongo_password: ${{ secrets.MONGO_PASSWORD }}
+          EOF
+          
+          # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_ec2.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
-            -e "workspace_root=${{ github.workspace }} deployment_dir=${{ github.event.inputs.deployment_dir }}" \
-                postgres_user=${{ secrets.POSTGRES_USER }} \
-                postgres_password=${{ secrets.POSTGRES_PASSWORD }} \
-                postgres_db=${{ secrets.POSTGRES_DB }} \
-                mongo_username=${{ secrets.MONGO_USERNAME }} \
-                mongo_password=${{ secrets.MONGO_PASSWORD }}"
+            -e @vars.yml
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
