@@ -5,7 +5,7 @@
 # =====================================
 
 # Variables requeridas:
-# - domain_name: Nombre del dominio para el certificado
+# - server_name: Nombre del dominio para el certificado
 # - admin_email: Email de administrador para notificaciones
 
 # Instalar Certbot y plugins de Nginx
@@ -25,7 +25,19 @@
   register: cert_exists
   become: true
 
-# Obtener el certificado usando Certbot
+# Detener Nginx para liberar el puerto 80
+- name: Detener Nginx temporalmente
+  service:
+    name: nginx
+    state: stopped
+  when:
+    - enable_ssl | default(false)
+    - not cert_exists.stat.exists
+    - server_name != "_"
+    - server_name != "localhost"
+  become: true
+
+# Obtener el certificado usando Certbot en modo standalone
 - name: Obtener certificado SSL con Certbot (Standalone)
   command: >
     certbot certonly --standalone 
@@ -40,14 +52,26 @@
     - server_name != "localhost"
   become: true
   register: certbot_result
-  failed_when: false
+  failed_when: certbot_result.rc != 0  # Cambiado para mostrar errores reales
   changed_when: "'Congratulations' in certbot_result.stdout"
+
+# Iniciar Nginx nuevamente
+- name: Iniciar Nginx nuevamente
+  service:
+    name: nginx
+    state: started
+  when:
+    - enable_ssl | default(false)
+    - not cert_exists.stat.exists
+    - server_name != "_"
+    - server_name != "localhost"
+  become: true
 
 # Configurar renovación automática
 - name: Configurar renovación automática de certificados
   cron:
     name: "Let's Encrypt certificate renewal"
-    job: "/usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'"
+    job: "/usr/bin/certbot renew --quiet --pre-hook 'systemctl stop nginx' --post-hook 'systemctl start nginx'"
     special_time: daily
   become: true
   when: enable_ssl | default(false)
