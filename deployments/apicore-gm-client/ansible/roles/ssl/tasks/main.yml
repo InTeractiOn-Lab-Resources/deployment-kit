@@ -4,7 +4,7 @@
 # Descripción: Gestiona certificados SSL con Let's Encrypt
 # =====================================
 
-# Variables requeridas:
+# Variables requeridas en el playbook:
 # - server_name: Nombre del dominio para el certificado
 # - admin_email: Email de administrador para notificaciones
 
@@ -52,7 +52,7 @@
     - server_name != "localhost"
   become: true
   register: certbot_result
-  failed_when: certbot_result.rc != 0  # Cambiado para mostrar errores reales
+  failed_when: certbot_result.rc != 0
   changed_when: "'Congratulations' in certbot_result.stdout"
 
 # Iniciar Nginx nuevamente

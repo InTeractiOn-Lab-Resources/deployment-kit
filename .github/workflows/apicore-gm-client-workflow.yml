@@ -156,7 +156,7 @@ jobs:
 #
 # 3. RESULTADOS:
 #    - En los logs verás la IP pública de tu instancia
-#    - Podrás acceder a tu aplicación en: http://IP-DE-INSTANCIA o https://DOMINIO
+#    - Podrás acceder a tu aplicación en: https://IP-DE-INSTANCIA o https://DOMINIO (o HTTP si no tienes SSL)
 #    - Para SSH: ssh -i id_rsa.pem ubuntu@IP-DE-INSTANCIA
 #
 # 4. SEGURIDAD (IMPORTANTE):

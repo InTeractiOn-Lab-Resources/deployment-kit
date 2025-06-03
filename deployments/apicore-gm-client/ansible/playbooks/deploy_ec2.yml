@@ -1,7 +1,7 @@
 ---
 # =====================================
 # PLAYBOOK: DESPLIEGUE EN AWS
-# Descripción: Configura una instancia EC2 de AWS para ejecutar la aplicación
+# Descripción: Configura una instancia EC2 de AWS (con GitHub Actions) para ejecutar la aplicación
 # =====================================
 
 - name: Despliegue en instancia EC2 AWS
@@ -33,7 +33,7 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
-    # Prefijo común para las imágenes Docker (si se deja vacío se asume Docker Hub)
+    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
     docker_registry: ""
     
     # Definición de servicios
@@ -82,13 +82,13 @@
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
     # Nombre del servidor (dominio o "_" para local)
-    server_name: "cantillantest.duckdns.org"
+    server_name: "_"
     
     # Para SSL (opcional, solo si tienes dominio)
-    enable_ssl: true
-    admin_email: "carolina.antillanca@usach.cl"
-    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    enable_ssl: false
+    # admin_email: "carolina.antillanca@usach.cl"
+    # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - python
@@ -115,9 +115,10 @@
 #        VARIABLE1: "valor1"
 #        VARIABLE2: "valor2"
 #
-# 2. VARIABLES DE ENTORNO:
+# 2. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
 #    - Específicas de un servicio: Añádelas dentro de env_vars en el servicio
 #    - Globales para todos: Añádelas en global_env_vars
+#    - Puedes usar secretos de GitHub Actions para estas variables.
 #
 # 3. CONFIGURACIÓN DE NGINX:
 #    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix

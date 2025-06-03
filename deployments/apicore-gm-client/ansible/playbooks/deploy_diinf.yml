@@ -1,7 +1,7 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN AWS
-# Descripción: Configura una instancia EC2 de AWS para ejecutar la aplicación
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL
+# Descripción: Configura una VM para ejecutar la aplicación usando archivos locales
 # =====================================
 
 - name: Despliegue manual en VM DIINF o local
@@ -14,7 +14,7 @@
     # Nombre del proyecto
     project_name: "apicore-gm-client"
     
-    # Directorio raíz del proyecto (asume que se ejecuta desde el directorio raíz)
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
     project_root: "{{ playbook_dir | dirname | dirname }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
@@ -26,7 +26,7 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
-    # Prefijo común para las imágenes Docker (si se deja vacío se asume Docker Hub)
+    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
     docker_registry: ""
     
     # Definición de servicios
@@ -69,3 +69,66 @@
     - { role: ssl, when: "enable_ssl | bool" }
     - nginx
     - provision
+
+# INSTRUCCIONES PARA DESPLIEGUE MANUAL EN DIINF O ENTORNO LOCAL:
+# 0. REQUISITOS:
+#    - Tener Ansible instalado.
+#    - Tener Git instalado.
+#
+# 1. PREPARACIÓN:
+#    a) Clona el repositorio donde se encuentra los archivos de despliegue (deployment-kit):
+#       git clone https://github.com/infra-sandbox/deployment-kit.git
+#    
+#    b) Navega a la ubicación de despliegue (donde están los archivos de Ansible, docker-compose, etc):
+#       cd deployment-kit/deployments/apicore-gm-client
+#
+#    c) Crea un archivo .env a partir del ejemplo:
+#       cp .env.example .env
+#       nano .env  # Edita las variables según tu configuración
+#
+#    d) Asegurate de tener esta organización de carpetas en tu repositorio:
+#       /{directorio_principal}/    (Ej: deployments/app)
+#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
+#          /ansible/         - Directorio base de Ansible
+#             /inventory/
+#             /playbooks/
+#             /roles/
+#          /docker-compose.yml
+#          /.env
+#
+# 2. EJECUCIÓN DEL PLAYBOOK:
+#    IMPORTANTE: Ejecuta el playbook desde el directorio principal del proyecto (donde estan los archivos de despliegue).
+#
+#    sudo ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook ansible/playbooks/deploy_diinf.yml -i ansible/inventory/hosts.ini
+#
+# 3. CONFIGURACIÓN DEL DOMINIO Y SSL:
+#    a) Para usar un dominio personalizado, modifica las siguientes variables:
+#       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
+#       - enable_ssl: true (para habilitar HTTPS)
+#       - admin_email: Tu email para certificados SSL
+#
+#    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
+#
+# 4. CÓMO AÑADIR SERVICIOS ADICIONALES:
+#    a) Para añadir un nuevo servicio, modifica la sección "services" añadiendo:
+#       - name: "nuevo_servicio"  # Un nombre único para el servicio
+#         type: "api"            # Tipo: "api" o "frontend"
+#         port: 3003             # Puerto en el host
+#         api_prefix: "nueva-api" # Ruta en Nginx (solo para tipo "api")
+#
+#    b) No olvides actualizar tu docker-compose.yml para incluir el nuevo servicio (solo si no lo tienes ya).
+#
+# 5. VERIFICACIÓN:
+#    Una vez completado el despliegue, accede a:
+#    - HTTP:  http://[tu-dominio-o-ip]/
+#    - HTTPS: https://[tu-dominio-o-ip]/ (si SSL está habilitado)
+#
+#    Microservicios disponibles:
+#    - Frontend: http(s)://[tu-dominio-o-ip]/
+#    - API Core: http(s)://[tu-dominio-o-ip]/api-core
+#    - API GM:   http(s)://[tu-dominio-o-ip]/api-gm
+#
+# NOTA:
+# Este playbook está diseñado para ejecutarse desde el directorio raíz del proyecto
+# donde se encuentran los archivos docker-compose.yml y .env. No se utiliza GitHub Actions,
+# sino que todo se ejecuta manualmente con Ansible desde tu máquina o servidor.
