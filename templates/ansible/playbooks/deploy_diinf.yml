@@ -1,108 +1,138 @@
-# ========================================================
-# PLAYBOOK: DESPLIEGUE EN EL DIINF o LOCAL
-# Descripción: Configura una VM del DIINF con todos los componentes necesarios para desplegar una aplicación 
-#              (también sirve para entornos locales con ubuntu)
-# ========================================================
 ---
-- name: Despliegue en VMs del DIINF
-  hosts: local
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (Ubuntu)
+# Descripción: Configura una VM para ejecutar la aplicación usando archivos locales
+# =====================================
+- name: Despliegue en VMs del DIINF o local
+  hosts: all
   become: true
   
   vars:
     # CONFIGURACIÓN BÁSICA DEL PROYECTO
     # ----------------------------------
     # Nombre del proyecto
-    project_name: "mi-aplicacion"
+    project_name: "app"
     
-    # Directorio raíz del proyecto
-    project_root: "/home/usuario/mi-aplicacion"
-    
-    # Directorio donde está el docker-compose.yml
-    compose_path: "/home/usuario/mi-aplicacion/docker"
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
+    project_root: "{{ playbook_dir | dirname | dirname }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
+
+    # Ruta a docker-compose.yml y .env (deben ya existir)
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
+    env_file_path: "{{ project_root }}/.env"
     
     # CONFIGURACIÓN DE SERVICIOS DOCKER
     # ---------------------------------
     # Imágenes Docker (cuando clone_repos = false)
+    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
     docker_registry: ""
-    service1_image: "usuario/api-core"
-    service1_tag: "latest"
     
-    service2_image: "usuario/api-gm" 
-    service2_tag: "latest"
-    
-    service3_image: "usuario/client-frontend"
-    service3_tag: "latest"
+    # Definición de servicios (Modificar según tus servicios)
+    services:
+      - name: "core"                     # Nombre interno del servicio
+        type: "api"                      # Tipo: api o frontend
+        port: 3001                       # Puerto en el host
+        api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
+      
+      - name: "gm"
+        type: "api"
+        port: 3002
+        api_prefix: "api-gm"
+      
+      - name: "client"
+        type: "frontend"
+        port: 3000
+      
+      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   type: "api"
+      #   port: 3003
+      #   api_prefix: "nuevo-api"
 
     # Repositorios para clonar (cuando clone_repos = true)
-    service1_repo_name: "api-core"
-    service1_repo_url: "https://github.com/usuario/api-core.git"
-    
-    service2_repo_name: "api-gm"
-    service2_repo_url: "https://github.com/usuario/api-gm.git"
-    
-    service3_repo_name: "client-frontend"
-    service3_repo_url: "https://github.com/usuario/client-frontend.git"
-    
-    config_repo_name: "deployment-config"
-    config_repo_url: "https://github.com/usuario/deployment-config.git"
+    # [AUN NO REVISADO]
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
-    # Nombre del servidor
+    # Nombre del servidor (dominio de la VM o "_" para local)
     server_name: "felucia.diinf.usach.cl"
     
-    # Configuración de puertos y rutas para Nginx
-    frontend_port: "3000"
-    api1_prefix: "api-core"
-    api1_port: "3001"
-    api2_prefix: "api-gm"
-    api2_port: "3002"
-
+    # Para SSL (opcional, enable_ssl: true -> si hay dominio, enable_ssl: false -> si es local)
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    
   roles:
     - firewall
     - python
     - docker
+    - { role: ssl, when: "enable_ssl | bool" }
     - nginx
     - provision
 
-# INSTRUCCIONES:
-# 1. PERSONALIZACIÓN DEL PLAYBOOK:
-#    a) Ajusta las variables básicas según tu entorno y estructura del proyecto:
-#       - project_name: Nombre de tu proyecto (se usará para nombrar directorios y configuraciones)
-#       - project_root: Ruta principal donde se almacenan los archivos de ansible
-#       - compose_path: Ruta al directorio con docker-compose.yml
-#       - clone_repos: Define si usarás imágenes precompiladas o clonarás repositorios.
-#         Si es false, se usarán imágenes Docker Hub precompiladas. Si es true, se clonarán los repositorios.
+# INSTRUCCIONES PARA DESPLIEGUE MANUAL EN DIINF O ENTORNO LOCAL:
+# 0. REQUISITOS:
+#    - Tener Ansible instalado.
+#    - Tener Git instalado.
+#    - Modificar las variables del playbook según tu configuración.
 #
-#    b) Define tus servicios:
-#       - Si usarás imágenes precompiladas (Docker Hub):
-#         Configura los service_image y service_tag.
-#         Elimina las variables de clonar repositorios.
+# 1. PREPARACIÓN:
+#    a) Clona el repositorio donde se encuentra los archivos de despliegue (deployment-kit):
+#       git clone https://github.com/infra-sandbox/deployment-kit.git
+#    
+#    b) Navega a la ubicación de despliegue (donde están los archivos de Ansible, docker-compose, etc):
+#       cd deployment-kit/deployments/apicore-gm-client
 #
-#       - Si vas a clonar repositorios:
-#         Configura los service_repo_name y service_repo_url.
-#         Elimina las variables de imágenes precompiladas.
+#    c) Crea un archivo .env a partir del ejemplo:
+#       cp .env.example .env
+#       nano .env  # Edita las variables según tu configuración
 #
-#    c) Configura Nginx:
-#       - Modifica el server_name con el dominio de la VM
-#       - Configura los prefijos y puertos de tus APIs
+#    d) Asegurate de tener esta organización de carpetas en tu repositorio:
+#       /{directorio_principal}/    (Ej: deployments/app)
+#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
+#          /ansible/         - Directorio base de Ansible
+#             /inventory/
+#             /playbooks/
+#             /roles/
+#          /docker-compose.yml
+#          /.env
 #
 # 2. EJECUCIÓN DEL PLAYBOOK:
-#    a) Ejecución básica:
-#       ansible-playbook deploy_diinf.yml -K
+#    IMPORTANTE: Ejecuta el playbook desde el directorio principal del proyecto (donde estan los archivos de despliegue).
 #
-#    b) Especificando variables en línea de comandos:
-#       ansible-playbook deploy_diinf.yml -K -e "project_name=mi-app-web clone_repos=true"
+#    sudo ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook ansible/playbooks/deploy_diinf.yml -i ansible/inventory/hosts.ini
 #
-#    c) Para ver qué haría sin ejecutar cambios:
-#       ansible-playbook deploy_diinf.yml -K --check
+# 3. CONFIGURACIÓN DEL DOMINIO Y SSL:
+#    a) Para usar un dominio personalizado, modifica las siguientes variables:
+#       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
+#       - enable_ssl: true (para habilitar HTTPS)
+#       - admin_email: Tu email para certificados SSL
 #
-# 3. MANTENIMIENTO:
-#    - Para actualizar solo la configuración de Nginx:
-#      ansible-playbook deploy_diinf.yml -K --tags nginx
+#    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
 #
-#    - Para actualizar las aplicaciones sin reinstalar dependencias:
-#      ansible-playbook deploy_diinf.yml -K --tags provision
+# 4. CÓMO AÑADIR SERVICIOS ADICIONALES:
+#    a) Para añadir un servicio, modifica la sección "services" añadiendo:
+#       - name: "nuevo_servicio"  # Un nombre único para el servicio
+#         type: "api"            # Tipo: "api" o "frontend"
+#         port: 3003             # Puerto en el host
+#         api_prefix: "nueva-api" # Ruta en Nginx (solo para tipo "api")
+#
+#    b) No olvides actualizar tu docker-compose.yml para incluir el servicio (solo si no lo tienes ya).
+#
+# 5. VERIFICACIÓN:
+#    Una vez completado el despliegue, accede a:
+#    - HTTP:  http://[tu-dominio-o-ip]/
+#    - HTTPS: https://[tu-dominio-o-ip]/ (si SSL está habilitado)
+#
+#    Microservicios disponibles (ejemplo):
+#    - Frontend: http(s)://[tu-dominio-o-ip]/
+#    - API Core: http(s)://[tu-dominio-o-ip]/api-core
+#    - API GM:   http(s)://[tu-dominio-o-ip]/api-gm
+#
+# NOTA:
+# Este playbook está diseñado para ejecutarse desde el directorio raíz del proyecto
+# donde se encuentran los archivos docker-compose.yml y .env. No se utiliza GitHub Actions,
+# sino que todo se ejecuta manualmente con Ansible desde tu máquina o servidor.

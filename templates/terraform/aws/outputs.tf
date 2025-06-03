@@ -1,40 +1,36 @@
 # ========================================================
-# SALIDAS DE TERRAFORM
-# Descripción: Define las salidas que serán mostradas después de la creación
+# OUTPUTS DE TERRAFORM
+# Descripción: Define los valores que se mostrarán al finalizar la ejecución
+# y que pueden ser utilizados por otros sistemas (como Ansible)
 # ========================================================
 
-output "instance_id" {
-  description = "ID de la instancia EC2 creada"
-  value       = aws_instance.app_instance.id
-}
-
+# La dirección IP pública de la instancia creada
 output "instance_public_ip" {
-  description = "Dirección IP pública de la instancia EC2"
-  value       = aws_instance.app_instance.public_ip
+  description = "IP pública de la instancia EC2 creada"
+  value       = aws_instance.app.public_ip
 }
 
-output "instance_private_ip" {
-  description = "Dirección IP privada de la instancia EC2"
-  value       = aws_instance.app_instance.private_ip
-}
-
+# El nombre del key pair creado en AWS
 output "key_pair_name" {
-  description = "Nombre del par de claves creado en AWS (usado para SSH)"
-  value       = aws_key_pair.app_key.key_name
+  description = "Nombre del key pair creado en AWS"
+  value = aws_key_pair.default.key_name
 }
 
-output "security_group_id" {
-  description = "ID del grupo de seguridad creado"
-  value       = aws_security_group.app_sg.id
+/*
+# IP Elástica asignada (solo si está habilitada)
+output "elastic_ip" {
+  description = "Elastic IP asignada a la instancia"
+  value       = aws_eip.app_eip.public_ip
+  depends_on = [aws_eip.app_eip]
 }
 
-output "ssh_command" {
-  description = "Comando para conectarse a la instancia via SSH"
-  value       = "ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.app_instance.public_ip}"
+# Dominio configurado (si se especificó)
+output "domain_name" {
+  description = "Dominio asociado con la Elastic IP"
+  value       = var.domain_name != "" ? var.domain_name : "No domain configured"
 }
+*/
 
-# Información de conexión para Ansible
-output "ansible_inventory" {
-  description = "Línea para añadir al inventario de Ansible"
-  value       = "${var.name_prefix}-instance ansible_host=${aws_instance.app_instance.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa"
-}
+# NOTA:
+# Descomentar los bloques de Elastic IP y dominio si se necesita una IP fija y un dominio personalizado.
+# De lo contrario, no se modifica este archivo y los bloques se mantienen comentados.

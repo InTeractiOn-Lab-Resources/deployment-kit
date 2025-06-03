@@ -1,8 +1,8 @@
 # ========================================================
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
-# Descripción: Crea infraestructura en AWS y despliega aplicaciones
+# Descripción: Crea infraestructura en AWS y despliega aplicaciones (Terraform + Ansible)
 # ========================================================
-name: Despliegue Automatizado AWS
+name: Despliegue automatizado en AWS
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -10,7 +10,7 @@ on:
       deployment_dir:
         description: 'Directorio principal de despliegue'
         required: true
-        default: 'deployments/app'
+        default: 'deployments/app' # Cambia esto según tu organización
 
 jobs:
   # TRABAJO 1: CREAR INFRAESTRUCTURA CON TERRAFORM
@@ -89,13 +89,32 @@ jobs:
 
       # Paso 4: Ejecutar Ansible para configurar la instancia
       - name: Run Ansible Playbook
+        env:
+          ANSIBLE_ROLES_PATH: roles
         run: |
-          cd ${{ github.event.inputs.deployment_dir }}/ansible && \
+          cd ${{ github.event.inputs.deployment_dir }}/ansible 
+          
+          # Crear archivo de variables dinámicamente
+          cat > vars.yml << EOF
+          ---
+          workspace_root: ${{ github.workspace }}
+          deployment_dir: ${{ github.event.inputs.deployment_dir }}
+          
+          # Variables de base de datos (Modificar según tus secretos)
+          postgres_user: ${{ secrets.POSTGRES_USER }}
+          postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          postgres_db: ${{ secrets.POSTGRES_DB }}
+          mongo_username: ${{ secrets.MONGO_USERNAME }}
+          mongo_password: ${{ secrets.MONGO_PASSWORD }}
+          EOF
+          
+          # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_ec2.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
-            --private-key ../../private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no"
+            --private-key ${{ github.workspace }}/private_key.pem \
+            --ssh-extra-args "-o StrictHostKeyChecking=no" \
+            -e @vars.yml
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
@@ -107,18 +126,28 @@ jobs:
 #    a) Crea estos SECRETOS en tu repositorio (Settings > Secrets > Actions):
 #       - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
 #       - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
-#       - INLINE_PUBLIC_KEY: Contenido de tu archivo ~/.ssh/id_rsa.pub
-#       - SSH_PRIVATE_KEY: Contenido de tu archivo ~/.ssh/id_rsa
+#       - INLINE_PUBLIC_KEY: Contenido de tu archivo id_rsa.pub
+#       - SSH_PRIVATE_KEY: Contenido de tu archivo id_rsa.pem
+#       - Variables de entorno para bases de datos (ejemplo: POSTGRES_USER, POSTGRES_PASSWORD, etc.)
 #
-#    b) Organiza tu repositorio con esta estructura para los archivos de despliegue:
+#    b) Modifica el valor por defecto del directorio principal según tu organización:
+#       - Edita la sección default de deployment-dir y cambia 'deployments/app' por el directorio que utilizarás para tu proyecto.
+#
+#    c) Organiza tu repositorio con esta estructura para los archivos de despliegue:
 #       /{directorio_principal}/    (Ej: deployments/app)
 #          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
 #          /ansible/         - Directorio base de Ansible
-#             /playbooks/    - Contiene el playbook deploy_ec2.yml
+#             /inventory/
+#             /playbooks/
+#             /roles/
+#          /docker-compose.yml
 #
-#    c) Modifica el valor por defecto del directorio principal si es necesario:
-#       - Edita el archivo workflow y cambia 'deployments/app' 
-#         por la ruta que utilizarás para tu proyecto
+#      *Asegúrate de que tu archivo docker-compose.yml esté en el directorio especificado.
+#       Si necesitas archivos adicionales (como init.sql), colócalos en el mismo directorio junto al docker-compose.yml.
+#
+#    c) Modificar variables de bases de datos:
+#       En el PASO 4 del trabajo "Configurar Instancia con Ansible",
+#       modifica las variables de entorno de bases de datos o puedes añadir más variables según tus necesidades.
 #
 # 2. EJECUCIÓN:
 #    a) Ve a la pestaña "Actions" en GitHub
@@ -127,10 +156,16 @@ jobs:
 #
 # 3. RESULTADOS:
 #    - En los logs verás la IP pública de tu instancia
-#    - Podrás acceder a tu aplicación en: http://IP-DE-INSTANCIA
-#    - Para SSH: ssh -i ~/.ssh/id_rsa ubuntu@IP-DE-INSTANCIA
+#    - Podrás acceder a tu aplicación en: https://IP-DE-INSTANCIA o https://DOMINIO (o HTTP si no tienes SSL)
+#    - Para SSH: ssh -i id_rsa.pem ubuntu@IP-DE-INSTANCIA
 #
 # 4. SEGURIDAD (IMPORTANTE):
 #    - Una vez desplegado, limita los puertos abiertos en el Security Group
-#      dejando solo HTTP (80), HTTPS (443) y SSH (22) desde tu IP, o elimina el puerto SSH si no lo necesitas.
+#      dejando solo HTTP (80), HTTPS (443) y SSH (22) desde tu IP o elimina el puerto SSH si no lo necesitas.
+#      El puerto SSH es necesario para conectarse con GitHub Actions, se recomienda eliminarlo después de la configuración.
 #    - Actualiza regularmente tu instancia con: sudo apt update && sudo apt upgrade
+#
+# NOTA IMPORTANTE:
+# - Este workflow está diseñado para ser ejecutado manualmente desde GitHub y como configuración inicial (no actualizar).
+#   Si se vuelve a ejecutar, se duplicará la instancia y los recursos. 
+#   Asegurate de eliminar la instancia anterior antes de volver a ejecutar el workflow.
