@@ -43,7 +43,6 @@
         image: "thecariah/api-core-test" # Imagen Docker
         tag: "latest"                    # Tag de la imagen
         port: 3001                       # Puerto en el host
-        container_port: 3001             # Puerto dentro del contenedor (opcional, si es diferente)
         env_var: "API_CORE_IMAGE"        # Nombre de variable para el .env
         api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
       
@@ -71,7 +70,7 @@
       #   env_var: "NUEVO_SERVICIO_IMAGE"
       #   api_prefix: "nuevo-api"
 
-    # Variables globales de entorno para todos los servicios (pueden ser inyectadas desde GitHub Secrets)
+    # Variables globales de entorno para todos los servicios (inyectadas desde GitHub Secrets)
     global_env_vars:
       POSTGRES_DB: "{{ postgres_db }}"
       POSTGRES_USER: "{{ postgres_user }}"
@@ -82,14 +81,14 @@
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
-    # Nombre del servidor (dominio o _ para cualquier dominio)
-    server_name: "_"
+    # Nombre del servidor (dominio o "_" para local)
+    server_name: "cantillantest.duckdns.org"
     
     # Para SSL (opcional, solo si tienes dominio)
-    enable_ssl: false
-    # admin_email: "admin@example.com"
-    # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-    # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - python
@@ -98,20 +97,20 @@
     - nginx
     - provision
 
-# INSTRUCCIONES PARA DESARROLLADORES:
-# ==================================
+# INSTRUCCIONES:
 #
 # 1. CÓMO AÑADIR UN NUEVO SERVICIO:
 #    Copia uno de los bloques de servicio existentes y modifica sus valores.
 #    Ejemplo:
 #
 #    - name: "nuevo-servicio"          # Nombre único del servicio
-#      type: "api"                     # Tipo: api, frontend o database
+#      type: "api"                     # Tipo: api o frontend
 #      image: "usuario/nueva-imagen"   # Imagen Docker
 #      tag: "latest"                   # Tag de la imagen
 #      port: 3003                      # Puerto en el host
+#      container_port: 3003            # Puerto dentro del contenedor (opcional)
 #      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable en el .env
-#      api_prefix: "nuevo-api"         # Ruta de API (solo para servicios tipo api)
+#      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api, si es frontend, no es necesario)
 #      env_vars:                       # Variables de entorno específicas (opcional)
 #        VARIABLE1: "valor1"
 #        VARIABLE2: "valor2"
@@ -124,7 +123,7 @@
 #    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix
 #    - Un único servicio tipo "frontend" será accesible en la ruta raíz (/)
 #
-# 4. SECRETOS PARA BASES DE DATOS:
+# 4. SECRETOS EN GITHUB ACTIONS PARA BASES DE DATOS:
 #    Ajusta los nombres según tu configuración, este es un ejemplo:
 #    - POSTGRES_USER: Usuario para PostgreSQL
 #    - POSTGRES_PASSWORD: Contraseña para PostgreSQL
