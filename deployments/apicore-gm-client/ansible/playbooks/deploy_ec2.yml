@@ -14,14 +14,18 @@
     # Nombre del proyecto
     project_name: "apicore-gm-client"
     
-    # Directorio raíz del proyecto (donde irán todos los archivos de Ansible)
+    # Directorio raíz del proyecto
     project_root: "/home/ubuntu/{{ project_name}}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
+
+    # Variables para localizar archivos (pasadas desde el workflow)
+    workspace_root: "{{ workspace_root }}"
+    deployment_dir: "{{ deployment_dir }}"
     
-    # Directorio local donde están los archivos a copiar (donde esta el docker-compose.yml)
-    local_files_dir: "deployments/apicore-gm-client/"
+    # Directorio local donde están los archivos a copiar (donde esta el docker-compose.yml y otros archivos necesarios)
+    local_files_dir: "{{ workspace_root }}/{{ deployment_dir }}"
     
     # Archivos adicionales a copiar
     additional_files:

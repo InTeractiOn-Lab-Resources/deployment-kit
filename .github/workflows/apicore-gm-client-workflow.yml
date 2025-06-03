@@ -2,7 +2,7 @@
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
 # Descripción: Crea infraestructura en AWS y despliega aplicaciones
 # ========================================================
-name: Despliegue de APICore, APIGM y Client en AWS
+name: Despliegue APICore-GM-Client en AWS
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -97,7 +97,8 @@ jobs:
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
             --private-key ${{ github.workspace }}/private_key.pem \
-            --ssh-extra-args "-o StrictHostKeyChecking=no"
+            --ssh-extra-args "-o StrictHostKeyChecking=no" \
+            -e "workspace_root=${{ github.workspace }} deployment_dir=${{ github.event.inputs.deployment_dir }}"
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key

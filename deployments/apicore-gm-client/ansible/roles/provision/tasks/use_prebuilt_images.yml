@@ -22,48 +22,43 @@
     - "{{ docker_registry | default('') }}{{ service3_image }}:{{ service3_tag | default('latest') }}"
   changed_when: true
   failed_when: false
-  when: not clone_repos | default(false)
 
-# OPCIÓN 1: Copiar docker-compose y archivos adicionales desde el repositorio local
+# Verificar si existe el archivo docker-compose.yml antes de copiarlo
+- name: Verificar existencia de docker-compose.yml
+  stat:
+    path: "{{ local_files_dir }}/docker-compose.yml"
+  register: docker_compose_stat
+  delegate_to: localhost
+  become: false
+
+# Mostrar información de depuración (útil para diagnóstico)
+- name: Mostrar información de depuración
+  debug:
+    msg: 
+      - "Buscando archivos en: {{ local_files_dir }}"
+      - "Archivo docker-compose.yml existe: {{ docker_compose_stat.stat.exists | default('desconocido') }}"
+      - "Workspace root: {{ workspace_root | default('no definido') }}"
+      - "Deployment dir: {{ deployment_dir | default('no definido') }}"
+
+# Copiar docker-compose desde el repositorio local
 - name: Copiar docker-compose.yml desde el repositorio local
   copy:
-    src: "{{ local_files_dir | default(playbook_dir + '/../files') }}/docker-compose.yml"
+    src: "{{ local_files_dir }}/docker-compose.yml"
     dest: "{{ project_root }}/docker-compose.yml"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
-  when: not clone_repos | default(false) and use_local_files | default(true)
 
 # Copiar archivos adicionales (SQL, configuración, etc.)
 - name: Copiar archivos adicionales si existen
   copy:
-    src: "{{ local_files_dir | default(playbook_dir + '/../files') }}/{{ item }}"
+    src: "{{ local_files_dir }}/{{ item }}"
     dest: "{{ project_root }}/{{ item }}"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
-  loop: "{{ additional_files | default(['init.sql']) }}"
-  when: not clone_repos | default(false) and use_local_files | default(true)
+  loop: "{{ additional_files | default([]) }}"
   ignore_errors: yes  # Continuar si algún archivo no existe
-
-# OPCIÓN 2: Clonar repositorio de configuración
-- name: Clonar repositorio de configuración
-  git:
-    repo: "{{ config_repo_url }}"
-    dest: "{{ project_root }}/{{ config_repo_name | default('config') }}"
-    version: "{{ config_repo_branch | default('main') }}"
-  when: not clone_repos | default(false) and not use_local_files | default(true) and config_repo_url is defined and config_repo_url != ""
-
-# Copiar docker-compose desde el repositorio clonado
-- name: Copiar docker-compose.yml desde el repositorio clonado
-  copy:
-    src: "{{ project_root }}/{{ config_repo_name | default('config') }}/{{ config_files_dir | default('') }}docker-compose.yml"
-    dest: "{{ project_root }}/docker-compose.yml"
-    remote_src: yes
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
-  when: not clone_repos | default(false) and not use_local_files | default(true) and config_repo_url is defined and config_repo_url != ""
 
 # Crear archivo .env con las variables necesarias para docker-compose
 - name: Crear archivo .env con rutas necesarias
@@ -80,7 +75,6 @@
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
-  when: not clone_repos | default(false)
 
 # Levantar los contenedores
 - name: Levantar contenedores con Docker Compose
@@ -88,4 +82,3 @@
   args:
     chdir: "{{ project_root }}"
   changed_when: true
-  
