@@ -13,85 +13,113 @@
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0755'
 
-# Descargar imágenes Docker desde el registro (Docker Hub u otro)
-- name: Descargar imágenes Docker preconstruidas
-  command: docker pull {{ docker_registry | default('') }}{{ item.image }}:{{ item.tag | default('latest') }}
-  loop: "{{ services }}"
+# Verificar si es un despliegue manual (los archivos ya existen)
+- name: Verificar si es un despliegue manual
+  stat:
+    path: "{{ project_root }}/docker-compose.yml"
+  register: docker_compose_exists
+  
+- name: Verificar si el archivo .env ya existe
+  stat:
+    path: "{{ project_root }}/.env"
+  register: env_file_exists
+
+# --- FLUJO PARA DESPLIEGUE LOCAL (DIINF) ---
+# Si el archivo docker-compose.yml y .env ya existen, asumimos despliegue manual
+- name: Descargar imágenes Docker (despliegue manual)
+  command: docker pull {{ item.image }}:{{ item.tag | default('latest') }}
+  loop: "{{ services | selectattr('image', 'defined') | list }}"
   changed_when: true
   failed_when: false
+  when: docker_compose_exists.stat.exists and env_file_exists.stat.exists
 
-# Verificar si existe el archivo docker-compose.yml antes de copiarlo
-- name: Verificar existencia de docker-compose.yml
-  stat:
-    path: "{{ local_files_dir }}/docker-compose.yml"
-  register: docker_compose_stat
-  delegate_to: localhost
-  become: false
+# --- FLUJO PARA DESPLIEGUE EN NUBE (GitHub Actions) ---
+# Esto solo se ejecuta cuando NO es un despliegue manual
+- block:
+  # Descargar imágenes Docker desde el registro (Docker Hub u otro)
+  - name: Descargar imágenes Docker preconstruidas
+    command: docker pull {{ docker_registry | default('') }}{{ item.image }}:{{ item.tag | default('latest') }}
+    loop: "{{ services }}"
+    changed_when: true
+    failed_when: false
 
-# Mostrar información de las rutas de los archivos necesarios
-- name: Mostrar información de depuración
-  debug:
-    msg: 
-      - "Buscando archivos en: {{ local_files_dir }}"
-      - "Archivo docker-compose.yml existe: {{ docker_compose_stat.stat.exists | default('desconocido') }}"
-      - "Workspace root: {{ workspace_root | default('no definido') }}"
-      - "Deployment dir: {{ deployment_dir | default('no definido') }}"
-      - "Servicios definidos: {{ services | length }}"
+  # Verificar si existe el archivo docker-compose.yml antes de copiarlo
+  - name: Verificar existencia de docker-compose.yml
+    stat:
+      path: "{{ local_files_dir }}/docker-compose.yml"
+    register: docker_compose_stat
+    delegate_to: localhost
+    become: false
 
-# Copiar docker-compose desde el repositorio local
-- name: Copiar docker-compose.yml desde el repositorio local
-  copy:
-    src: "{{ local_files_dir }}/docker-compose.yml"
-    dest: "{{ project_root }}/docker-compose.yml"
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
+  # Mostrar información de las rutas de los archivos necesarios
+  - name: Mostrar información de depuración
+    debug:
+      msg: 
+        - "Buscando archivos en: {{ local_files_dir }}"
+        - "Archivo docker-compose.yml existe: {{ docker_compose_stat.stat.exists | default('desconocido') }}"
+        - "Workspace root: {{ workspace_root | default('no definido') }}"
+        - "Deployment dir: {{ deployment_dir | default('no definido') }}"
+        - "Servicios definidos: {{ services | length }}"
 
-# Copiar archivos adicionales (SQL, configuración, etc.)
-- name: Copiar archivos adicionales si existen
-  copy:
-    src: "{{ local_files_dir }}/{{ item }}"
-    dest: "{{ project_root }}/{{ item }}"
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
-  loop: "{{ additional_files | default([]) }}"
-  ignore_errors: yes  # Continuar si algún archivo no existe
+  # Copiar docker-compose desde el repositorio local
+  - name: Copiar docker-compose.yml desde el repositorio local
+    copy:
+      src: "{{ local_files_dir }}/docker-compose.yml"
+      dest: "{{ project_root }}/docker-compose.yml"
+      owner: "{{ ansible_user_id | default('ubuntu') }}"
+      group: "{{ ansible_user_id | default('ubuntu') }}"
+      mode: '0644'
 
-# Generar el contenido del .env para los servicios
-- name: Generar el contenido del archivo .env
-  set_fact:
-    env_vars_content: |
-      # Variables para las imágenes de servicios
-      {% for service in services %}
-      {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
-      {% endfor %}
-      
-      # Variables globales
-      {% for key, value in global_env_vars.items() %}
-      {{ key }}={{ value }}
-      {% endfor %}
-      
-      # Variables específicas por servicio
-      {% for service in services %}
-      {% if service.env_vars is defined %}
-      # {{ service.name | capitalize }} Variables
-      {% for key, value in service.env_vars.items() %}
-      {{ key }}={{ value }}
-      {% endfor %}
-      {% endif %}
-      {% endfor %}
+  # Copiar archivos adicionales (SQL, configuración, etc.)
+  - name: Copiar archivos adicionales si existen
+    copy:
+      src: "{{ local_files_dir }}/{{ item }}"
+      dest: "{{ project_root }}/{{ item }}"
+      owner: "{{ ansible_user_id | default('ubuntu') }}"
+      group: "{{ ansible_user_id | default('ubuntu') }}"
+      mode: '0644'
+    loop: "{{ additional_files | default([]) }}"
+    ignore_errors: yes  # Continuar si algún archivo no existe
 
-# Crear archivo .env con variables de entorno dinámicas
-- name: Crear archivo .env con variables de entorno
-  copy:
-    dest: "{{ project_root }}/.env"
-    content: "{{ env_vars_content }}"
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
+  # Generar el contenido del .env para los servicios
+  - name: Generar el contenido del archivo .env
+    set_fact:
+      env_vars_content: |
+        # Variables para las imágenes de servicios
+        {% for service in services %}
+        {% if service.image is defined and service.env_var is defined %}
+        {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
+        {% endif %}
+        {% endfor %}
+        
+        # Variables globales
+        {% for key, value in global_env_vars.items() %}
+        {{ key }}={{ value }}
+        {% endfor %}
+        
+        # Variables específicas por servicio
+        {% for service in services %}
+        {% if service.env_vars is defined %}
+        # {{ service.name | capitalize }} Variables
+        {% for key, value in service.env_vars.items() %}
+        {{ key }}={{ value }}
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
 
-# Levantar los contenedores
+  # Crear archivo .env con variables de entorno dinámicas
+  - name: Crear archivo .env con variables de entorno
+    copy:
+      dest: "{{ project_root }}/.env"
+      content: "{{ env_vars_content }}"
+      owner: "{{ ansible_user_id | default('ubuntu') }}"
+      group: "{{ ansible_user_id | default('ubuntu') }}"
+      mode: '0644'
+  
+  when: not (docker_compose_exists.stat.exists and env_file_exists.stat.exists)
+
+# --- COMÚN PARA AMBOS FLUJOS ---
+# Levantar los contenedores (esto se hace igual en ambos casos)
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
   args:

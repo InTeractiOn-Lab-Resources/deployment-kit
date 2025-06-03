@@ -30,7 +30,6 @@
     # Archivos adicionales a copiar
     additional_files:
       - "init.sql"
-      - ".env.example"
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
@@ -111,7 +110,7 @@
 #      port: 3003                      # Puerto en el host
 #      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable en el .env
 #      api_prefix: "nuevo-api"         # Ruta de API (solo para servicios tipo api)
-#      env_vars:                       # Variables de entorno específicas
+#      env_vars:                       # Variables de entorno específicas (opcional)
 #        VARIABLE1: "valor1"
 #        VARIABLE2: "valor2"
 #

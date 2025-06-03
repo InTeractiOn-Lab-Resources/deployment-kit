@@ -1,0 +1,68 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN AWS
+# Descripción: Configura una instancia EC2 de AWS para ejecutar la aplicación
+# =====================================
+
+- name: Despliegue manual en VM DIINF o local
+  hosts: localhost
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "apicore-gm-client"
+    
+    # Directorio raíz del proyecto (asume que se ejecuta desde el directorio raíz)
+    project_root: "{{ playbook_dir | dirname | dirname }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: false
+
+    # Ruta a docker-compose.yml y .env (deben ya existir)
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
+    env_file_path: "{{ project_root }}/.env"
+    
+    # CONFIGURACIÓN DE SERVICIOS
+    # --------------------------
+    # Prefijo común para las imágenes Docker (si se deja vacío se asume Docker Hub)
+    docker_registry: ""
+    
+    # Definición de servicios
+    services:
+      - name: "core"                     # Nombre interno del servicio
+        type: "api"                      # Tipo: api o frontend
+        port: 3001                       # Puerto en el host
+        api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
+      
+      - name: "gm"
+        type: "api"
+        port: 3002
+        api_prefix: "api-gm"
+      
+      - name: "client"
+        type: "frontend"
+        port: 3000
+      
+      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   type: "api"
+      #   port: 3003
+      #   api_prefix: "nuevo-api"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio o _ para cualquier dominio)
+    server_name: "_"
+    
+    # Para SSL (opcional, solo si tienes dominio)
+    enable_ssl: false
+    # ssl_cert_path: "/etc/ssl/certs/mi-certificado.crt"
+    # ssl_key_path: "/etc/ssl/private/mi-clave.key"
+    
+  roles:
+    - python
+    - docker
+    - nginx
+    - provision
