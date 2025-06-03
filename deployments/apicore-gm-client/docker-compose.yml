@@ -7,7 +7,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/coredb
+      - MONGO_URI=mongodb://${MONGO_USERNAME:?err}:${MONGO_PASSWORD:?err}@mongo:27017/coredb?authSource=admin
     networks:
       - app-network
 
@@ -17,7 +17,7 @@ services:
     ports:
       - "3002:3002"
     environment:
-      - POSTGRES_URI=postgresql://gm_user:gm_pass@postgres:5432/gmdb
+      - POSTGRES_URI=postgresql://${POSTGRES_USER:?err}:${POSTGRES_PASSWORD:?err}@postgres:5432/${POSTGRES_DB:?err}
     networks:
       - app-network
 
@@ -35,6 +35,9 @@ services:
   mongo:
     image: mongo:5
     container_name: mongo-db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:?err}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?err}
     ports:
       - "27017:27017"
     volumes:
@@ -46,9 +49,9 @@ services:
     image: postgres:15
     container_name: gm-postgres
     environment:
-      POSTGRES_DB: gmdb
-      POSTGRES_USER: gm_user
-      POSTGRES_PASSWORD: gm_pass
+      POSTGRES_DB: ${POSTGRES_DB:?err}
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
     ports:
       - "5432:5432"
     volumes:

@@ -98,7 +98,12 @@ jobs:
             --user ubuntu \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
-            -e "workspace_root=${{ github.workspace }} deployment_dir=${{ github.event.inputs.deployment_dir }}"
+            -e "workspace_root=${{ github.workspace }} deployment_dir=${{ github.event.inputs.deployment_dir }}" \
+                postgres_user=${{ secrets.POSTGRES_USER }} \
+                postgres_password=${{ secrets.POSTGRES_PASSWORD }} \
+                postgres_db=${{ secrets.POSTGRES_DB }} \
+                mongo_username=${{ secrets.MONGO_USERNAME }} \
+                mongo_password=${{ secrets.MONGO_PASSWORD }}"
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
@@ -111,7 +116,8 @@ jobs:
 #       - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
 #       - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
 #       - INLINE_PUBLIC_KEY: Contenido de tu archivo ~/.ssh/id_rsa.pub
-#       - SSH_PRIVATE_KEY: Contenido de tu archivo ~/.ssh/id_rsa
+#       - SSH_PRIVATE_KEY: Contenido de tu archivo ~/.ssh/
+#       - Variables de entorno para bases de datos (ejemplo: POSTGRES_USER, POSTGRES_PASSWORD, etc.)
 #
 #    b) Organiza tu repositorio con esta estructura para los archivos de despliegue:
 #       /{directorio_principal}/    (Ej: deployments/app)

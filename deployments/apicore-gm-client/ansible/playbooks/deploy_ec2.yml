@@ -30,6 +30,7 @@
     # Archivos adicionales a copiar
     additional_files:
       - "init.sql"
+      - ".env.example"
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
@@ -71,10 +72,14 @@
       #   env_var: "NUEVO_SERVICIO_IMAGE"
       #   api_prefix: "nuevo-api"
 
-    # Variables globales de entorno para todos los servicios
+    # Variables globales de entorno para todos los servicios (pueden ser inyectadas desde GitHub Secrets)
     global_env_vars:
+      POSTGRES_DB: "{{ postgres_db }}"
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+      MONGO_USERNAME: "{{ mongo_username }}"
+      MONGO_PASSWORD: "{{ mongo_password }}"
       INIT_SQL_PATH: "{{ project_root }}/init.sql"
-      # Otras variables globales que necesites
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
@@ -117,3 +122,9 @@
 # 3. CONFIGURACIÓN DE NGINX:
 #    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix
 #    - Un único servicio tipo "frontend" será accesible en la ruta raíz (/)
+#
+# 4. SECRETOS PARA BASES DE DATOS:
+#    Ajusta los nombres según tu configuración, este es un ejemplo:
+#    - POSTGRES_USER: Usuario para PostgreSQL
+#    - POSTGRES_PASSWORD: Contraseña para PostgreSQL
+#    - POSTGRES_DB: Nombre de la base de datos PostgreSQL
