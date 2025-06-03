@@ -53,16 +53,19 @@
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
-    # Nombre del servidor (dominio o _ para cualquier dominio)
-    server_name: "_"
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    server_name: "felucia.diinf.usach.cl"
     
-    # Para SSL (opcional, solo si tienes dominio)
-    enable_ssl: false
-    # ssl_cert_path: "/etc/ssl/certs/mi-certificado.crt"
-    # ssl_key_path: "/etc/ssl/private/mi-clave.key"
+    # Para SSL (opcional, solo si hay dominio)
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
+    - firewall
     - python
     - docker
+    - { role: ssl, when: "enable_ssl | bool" }
     - nginx
     - provision

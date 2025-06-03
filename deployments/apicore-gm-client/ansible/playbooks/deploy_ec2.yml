@@ -87,12 +87,14 @@
     
     # Para SSL (opcional, solo si tienes dominio)
     enable_ssl: false
-    # ssl_cert_path: "/etc/ssl/certs/mi-certificado.crt"
-    # ssl_key_path: "/etc/ssl/private/mi-clave.key"
+    # admin_email: "admin@example.com"
+    # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - python
     - docker
+    - { role: ssl, when: "enable_ssl | bool" }
     - nginx
     - provision
 
