@@ -5,7 +5,7 @@
 # =====================================
 
 - name: Despliegue manual en VM DIINF o local
-  hosts: localhost
+  hosts: all
   become: true
   
   vars:
