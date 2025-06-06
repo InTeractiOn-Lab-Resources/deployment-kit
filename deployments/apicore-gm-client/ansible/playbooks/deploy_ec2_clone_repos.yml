@@ -54,19 +54,19 @@
     # Repositorios a clonar (solo necesario cuando clone_repos: true)
     service_repos:
       - name: "api-core"  # Nombre de la carpeta donde se clonará
-        url: "https://github.com/mi-organizacion/api-core.git"
+        url: "https://github.com/infra-sandbox/api-core-test.git"
         branch: "main"
         env_var: "API_CORE_PATH"
         service: "core"  # Debe coincidir con un servicio en la sección 'services'
       
       - name: "api-gm"
-        url: "https://github.com/mi-organizacion/api-gm.git"
+        url: "https://github.com/infra-sandbox/api-gm-test.git"
         branch: "main"
         env_var: "API_GM_PATH"
         service: "gm"
       
       - name: "client"
-        url: "https://github.com/mi-organizacion/client.git"
+        url: "https://github.com/infra-sandbox/client-test.git"
         branch: "main"
         env_var: "CLIENT_PATH"
         service: "client"
