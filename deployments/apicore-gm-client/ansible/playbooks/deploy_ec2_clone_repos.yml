@@ -1,7 +1,8 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN AWS
+# PLAYBOOK: DESPLIEGUE EN AWS (CONFIGURACIÓN PARA clone_repos: true)
 # Descripción: Configura una instancia EC2 de AWS (con GitHub Actions) para ejecutar la aplicación
+#              Despliega en modo "clone_repos" = true, es decir, clona los repositorios y construye las imágenes localmente.
 # =====================================
 
 - name: Despliegue en instancia EC2 AWS
@@ -18,7 +19,7 @@
     project_root: "/home/ubuntu/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
-    clone_repos: false
+    clone_repos: true
 
     # Variables para localizar archivos (pasadas desde el workflow)
     workspace_root: "{{ workspace_root | default(playbook_dir + '/../../..') }}"
@@ -33,33 +34,42 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
-    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
-    docker_registry: ""
     
-    # Definición de servicios
+    # Definición de servicios (necesario para ambos modos de despliegue)
     services:
       - name: "core"
         type: "api"
-        image: "thecariah/api-core-test"
-        tag: "latest"
         port: 3001
-        env_var: "API_CORE_IMAGE"
         api_prefix: "api-core"
       
       - name: "gm"
         type: "api"
-        image: "thecariah/api-gm-test"
-        tag: "latest"
         port: 3002
-        env_var: "API_GM_IMAGE"
         api_prefix: "api-gm"
       
       - name: "client"
         type: "frontend"
-        image: "thecariah/client-test"
-        tag: "latest"
         port: 3000
-        env_var: "CLIENT_IMAGE"
+    
+    # Repositorios a clonar (solo necesario cuando clone_repos: true)
+    service_repos:
+      - name: "api-core"  # Nombre de la carpeta donde se clonará
+        url: "https://github.com/mi-organizacion/api-core.git"
+        branch: "main"
+        env_var: "API_CORE_PATH"
+        service: "core"  # Debe coincidir con un servicio en la sección 'services'
+      
+      - name: "api-gm"
+        url: "https://github.com/mi-organizacion/api-gm.git"
+        branch: "main"
+        env_var: "API_GM_PATH"
+        service: "gm"
+      
+      - name: "client"
+        url: "https://github.com/mi-organizacion/client.git"
+        branch: "main"
+        env_var: "CLIENT_PATH"
+        service: "client"
 
     # Variables globales de entorno para todos los servicios (inyectadas desde GitHub Secrets)
     global_env_vars:
@@ -90,9 +100,22 @@
 
 # INSTRUCCIONES:
 #
-# 1. CÓMO AÑADIR UN NUEVO SERVICIO:
+# 1. MODO DE DESPLIEGUE:
+#    a. MODO CON IMÁGENES PRECONSTRUIDAS EN DOCKER HUB:
+#       - Define clone_repos: false
+#       - Define 'services' con los campos 'name', 'type', 'image', 'tag', 'port', 'env_var' y 'api_prefix'
+#
+#    b. MODO CON CLONACIÓN DE REPOSITORIOS:
+#       - Define clone_repos: true
+#       - Define 'services' con los campos 'name', 'type' y 'port'
+#       - Define 'service_repos' con los campos 'name', 'url', 'branch', 'env_var' y 'service'
+#
+#       * IMPORTANTE: El campo 'service' debe coincidir con el nombre en la sección 'services'
+#
+# 2. CÓMO AÑADIR UN NUEVO SERVICIO:
 #    Copia uno de los bloques de servicio existentes y modifica sus valores.
-#    Ejemplo:
+#
+#    Ejemplo (clone_repos: false):
 #
 #    - name: "nuevo-servicio"          # Nombre único del servicio
 #      type: "api"                     # Tipo: api o frontend
@@ -106,16 +129,31 @@
 #        VARIABLE1: "valor1"
 #        VARIABLE2: "valor2"
 #
-# 2. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
+#   Ejemplo (clone_repos: true):
+#   Se requiere definir el servicio en 'services' y en 'service_repos', pero en este caso no se usa 'image' ni 'tag'.
+#
+#   services:
+#   - name: "nuevo-servicio"          # Nombre único del servicio
+#     type: "api"                     # Tipo: api o frontend
+#     port: 3003                      # Puerto en el host
+#
+#   service_repos:
+#     - name: "nuevo-servicio"                              # Nombre de la carpeta donde se clonará
+#       url: "https://github.com/mi-organizacion/app.git"   # URL del repositorio
+#       branch: "main"                                      # Rama a clonar
+#       env_var: "NUEVO_SERVICIO_PATH"                      # Variable de entorno (debe coincidir con el nombre en docker-compose.yml)
+#       service: "nuevo-servicio"                           # Debe coincidir con un servicio en la sección 'services'
+#   
+# 3. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
 #    - Específicas de un servicio: Añádelas dentro de env_vars en el servicio
 #    - Globales para todos: Añádelas en global_env_vars
 #    - Puedes usar secretos de GitHub Actions para estas variables.
 #
-# 3. CONFIGURACIÓN DE NGINX:
+# 4. CONFIGURACIÓN DE NGINX:
 #    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix
 #    - Un único servicio tipo "frontend" será accesible en la ruta raíz (/)
 #
-# 4. SECRETOS EN GITHUB ACTIONS PARA BASES DE DATOS:
+# 5. SECRETOS EN GITHUB ACTIONS PARA BASES DE DATOS:
 #    Ajusta los nombres según tu configuración, este es un ejemplo:
 #    - POSTGRES_USER: Usuario para PostgreSQL
 #    - POSTGRES_PASSWORD: Contraseña para PostgreSQL
