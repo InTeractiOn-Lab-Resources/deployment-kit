@@ -54,10 +54,10 @@
     - name: Mostrar estado de los repositorios
       debug:
         msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
+        verbosity: 1
       loop: "{{ repo_stat.results }}"
       loop_control:
         label: "{{ item.item.name }}"
-      verbosity: 1
 
     # Clonar repositorio si no existe
     - name: Clonar repositorios que no existen
