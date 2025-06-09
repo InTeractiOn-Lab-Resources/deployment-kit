@@ -109,7 +109,7 @@ jobs:
           EOF
           
           # Ejecutar Ansible con el archivo de variables
-          ansible-playbook playbooks/deploy_ec2.yml \
+          ansible-playbook playbooks/deploy_ec2_clone_repos.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ubuntu \
             --private-key ${{ github.workspace }}/private_key.pem \
