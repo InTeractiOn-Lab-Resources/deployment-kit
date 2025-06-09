@@ -112,6 +112,9 @@
     mode: '0644'
   loop: "{{ additional_files | default([]) }}"
   ignore_errors: yes  # Continuar si algún archivo no existe
+  when:
+    - additional_files is defined
+    - local_files_dir is defined
   tags:
     - provision
     - clone
@@ -144,6 +147,7 @@
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
+  when: global_env_vars is defined
   tags:
     - provision
     - clone
