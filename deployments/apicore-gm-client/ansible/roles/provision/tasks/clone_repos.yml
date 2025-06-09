@@ -96,6 +96,7 @@
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
+  when: local_files_dir is defined
   tags:
     - provision
     - clone
