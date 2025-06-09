@@ -118,7 +118,7 @@
 
 # Crear archivo .env con rutas locales y variables de entorno
 - name: Crear archivo .env con rutas locales
-  template:
+  copy:
     dest: "{{ project_root }}/.env"
     content: |
       # Rutas a los repositorios locales
