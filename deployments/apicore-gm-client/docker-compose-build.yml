@@ -4,31 +4,28 @@ services:
   core:
     build:
       context: ${API_CORE_PATH}
-    image: core-api
     container_name: core-api
     ports:
       - "3001:3001"
     environment:
-      - MONGO_URI=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/coredb
+      - MONGO_URI=mongodb://${MONGO_USERNAME:?err}:${MONGO_PASSWORD:?err}@mongo:27017/coredb?authSource=admin
     networks:
       - app-network
 
   gm:
     build:
       context: ${API_GM_PATH}
-    image: gm-api
     container_name: gm-api
     ports:
       - "3002:3002"
     environment:
-      - POSTGRES_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - POSTGRES_URI=postgresql://${POSTGRES_USER:?err}:${POSTGRES_PASSWORD:?err}@postgres:5432/${POSTGRES_DB:?err}
     networks:
       - app-network
 
   client:
     build:
       context: ${CLIENT_PATH}
-    image: client-app
     container_name: client-app
     ports:
       - "3000:3000"
@@ -42,8 +39,8 @@ services:
     image: mongo:5
     container_name: mongo-db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:?err}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?err}
     ports:
       - "27017:27017"
     volumes:
@@ -55,14 +52,14 @@ services:
     image: postgres:15
     container_name: gm-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?err}
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ${INIT_SQL_PATH}:/docker-entrypoint-initdb.d/init.sql
+      - ${INIT_SQL_PATH}:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - app-network
 
@@ -73,3 +70,4 @@ networks:
 volumes:
   mongo_data:
   postgres_data:
+
