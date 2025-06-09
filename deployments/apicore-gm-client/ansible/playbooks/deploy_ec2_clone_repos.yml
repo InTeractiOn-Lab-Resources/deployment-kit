@@ -110,7 +110,7 @@
 #       - Define 'services' con los campos 'name', 'type' y 'port'
 #       - Define 'service_repos' con los campos 'name', 'url', 'branch', 'env_var' y 'service'
 #
-#       * IMPORTANTE: El campo 'service' debe coincidir con el nombre en la sección 'services'
+#       * IMPORTANTE: El campo 'service' debe coincidir con el campo 'name' en la sección 'services'
 #
 # 2. CÓMO AÑADIR UN NUEVO SERVICIO:
 #    Copia uno de los bloques de servicio existentes y modifica sus valores.

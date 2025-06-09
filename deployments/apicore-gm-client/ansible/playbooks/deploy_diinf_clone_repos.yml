@@ -1,0 +1,86 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (CONFIGURACIÓN PARA clone_repos: true)
+# Descripción: Configura una VM para ejecutar la aplicación usando archivos locales
+#              Despliega en modo "clone_repos" = true, es decir, clona los repositorios y construye las imágenes localmente.
+# =====================================
+
+- name: Despliegue manual en VM DIINF o local
+  hosts: all
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "apicore-gm-client"
+    
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
+    project_root: "{{ playbook_dir | dirname | dirname }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: true
+
+    # Ruta a docker-compose.yml y .env (deben ya existir)
+    docker_compose_path: "{{ project_root }}/docker-compose-build.yml"
+    env_file_path: "{{ project_root }}/.env"
+    
+    # CONFIGURACIÓN DE SERVICIOS
+    # --------------------------
+    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
+    docker_registry: ""
+    
+    # Definición de servicios
+    services:
+      - name: "core"
+        type: "api"
+        port: 3001
+        api_prefix: "api-core"
+      
+      - name: "gm"
+        type: "api"
+        port: 3002
+        api_prefix: "api-gm"
+      
+      - name: "client"
+        type: "frontend"
+        port: 3000
+      
+    # Repositorios a clonar
+    service_repos:
+      - name: "api-core"
+        url: "https://github.com/infra-sandbox/api-core-test.git"
+        branch: "main"
+        env_var: "API_CORE_PATH"
+        service: "core"
+      
+      - name: "api-gm"
+        url: "https://github.com/infra-sandbox/api-gm-test.git"
+        branch: "main"
+        env_var: "API_GM_PATH"
+        service: "gm"
+      
+      - name: "client"
+        url: "https://github.com/infra-sandbox/client-test.git"
+        branch: "main"
+        env_var: "CLIENT_PATH"
+        service: "client"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    server_name: "felucia.diinf.usach.cl"
+    
+    # Para SSL (opcional, solo si hay dominio)
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    
+  roles:
+    - firewall
+    - python
+    - docker
+    - { role: ssl, when: "enable_ssl | bool" }
+    - nginx
+    - provision
