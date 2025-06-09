@@ -22,7 +22,7 @@
     clone_repos: true
 
     # Ruta a docker-compose.yml y .env (deben ya existir)
-    docker_compose_path: "{{ project_root }}/docker-compose-build.yml"
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
     env_file_path: "{{ project_root }}/.env"
     
     # CONFIGURACIÓN DE SERVICIOS
