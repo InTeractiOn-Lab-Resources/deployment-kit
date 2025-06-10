@@ -9,8 +9,8 @@ variable "do_token" {
   type        = string
 }
 
-# ID de clave pública SSH ya registrada en DigitalOcean
+# Huella digital (fingerprint) de la clave SSH en DigitalOcean
 variable "inline_public_key" {
-  description = "ID de la clave pública SSH en DigitalOcean"
+  description = "Fingerprint de la clave SSH en DigitalOcean"
   type        = string
 }
