@@ -20,7 +20,7 @@ jobs:
 
     # Variables de entorno necesarias
     env:
-      TF_VAR_do_token: ${{ secrets.TF_VAR_DO_TOKEN }}
+      TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
       TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY_DO }}
 
     # Directorio donde está la configuración de Terraform
@@ -113,7 +113,7 @@ jobs:
             --user root \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
-            -e @vars.yml
+            -e @vars.yml -vvv
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
