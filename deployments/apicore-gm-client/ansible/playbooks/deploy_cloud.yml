@@ -80,7 +80,16 @@
     # admin_email: "carolina.antillanca@usach.cl"
     # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
     # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
-    
+
+  pre_tasks:
+  # Verificar conexión SSH
+  - name: Test SSH Connection
+    run: |
+      chmod 600 private_key.pem
+      echo "Esperando 30 segundos para que el sistema esté listo..."
+      sleep 30
+      ssh -i private_key.pem -o StrictHostKeyChecking=no root@${{ needs.create-infrastructure.outputs.instance_ip }} "echo SSH connection successful && ls -la / && python3 --version"  
+  
   roles:
     - python
     - docker
