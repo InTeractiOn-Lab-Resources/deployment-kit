@@ -97,8 +97,6 @@
         if [ -f /var/lib/dpkg/lock-frontend ]; then
           rm -f /var/lib/dpkg/lock-frontend
         fi
-      args:
-        warn: false
       changed_when: false
 
     - name: Actualizar caché de APT antes de cualquier otra tarea
