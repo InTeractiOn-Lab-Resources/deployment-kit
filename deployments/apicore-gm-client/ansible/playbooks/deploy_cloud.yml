@@ -80,48 +80,6 @@
     # admin_email: "carolina.antillanca@usach.cl"
     # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
     # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
-  
-  pre_tasks:
-    - name: Esperar 30 segundos para que el sistema se estabilice
-      wait_for:
-        timeout: 30
-      
-    - name: Verificar y desbloquear cualquier lock de APT
-      shell: |
-        if [ -f /var/lib/apt/lists/lock ]; then
-          rm -f /var/lib/apt/lists/lock
-        fi
-        if [ -f /var/lib/dpkg/lock ]; then
-          rm -f /var/lib/dpkg/lock
-        fi
-        if [ -f /var/lib/dpkg/lock-frontend ]; then
-          rm -f /var/lib/dpkg/lock-frontend
-        fi
-      changed_when: false
-    
-    - name: Verificar si hay procesos bloqueando APT
-      shell: ps aux | grep -i apt | grep -v grep
-      register: apt_processes
-      changed_when: false
-      failed_when: false
-
-    - name: Mostrar procesos de APT encontrados
-      debug:
-        var: apt_processes.stdout_lines
-      when: apt_processes.stdout != ""
-    
-    - name: Esperar si hay procesos APT en ejecución
-      wait_for:
-        timeout: 30
-      when: apt_processes.stdout != ""
-
-    - name: Actualizar caché de APT antes de cualquier otra tarea
-      shell: apt-get update -qq
-      register: apt_update
-      retries: 5
-      delay: 15
-      until: apt_update is success
-      changed_when: false
     
   roles:
     - python

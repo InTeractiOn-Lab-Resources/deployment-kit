@@ -27,9 +27,18 @@ resource "digitalocean_droplet" "app" {
 
   tags = ["apicore-gm-client-droplet"] # Etiquetas para organizar recursos
   
-  # Script de inicialización para montar automáticamente el volumen
+  # Script de inicialización para montar automáticamente el volumen y pre-instalar dependencias
   user_data = <<-EOF
     #!/bin/bash
+    
+    # Desactivar actualizaciones automáticas para evitar conflictos con apt
+    systemctl stop unattended-upgrades 2>/dev/null || true
+    systemctl disable unattended-upgrades 2>/dev/null || true
+    
+    # Pre-instalar dependencias necesarias para Ansible
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    apt-get install -y python3 python3-pip docker.io docker-compose curl gnupg ca-certificates
     
     # Esperar a que el volumen esté disponible
     while [ ! -e /dev/disk/by-id/scsi-0DO_Volume_app-data ]; do
@@ -52,6 +61,7 @@ resource "digitalocean_droplet" "app" {
     
     # Crear un archivo para verificar que el script se ejecutó
     echo "Volumen montado correctamente el $(date)" > /data/volume_mounted.txt
+    echo "Dependencias pre-instaladas: Python3, Docker, etc." >> /data/volume_mounted.txt
   EOF
 }
 
