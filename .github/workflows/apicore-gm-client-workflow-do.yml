@@ -1,0 +1,120 @@
+# ========================================================
+# WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN DIGITAL OCEAN
+# Descripción: Crea infraestructura en Digital Ocean (Droplet) y despliega aplicaciones
+# ========================================================
+name: Despliegue APICore-GM-Client en Digital Ocean
+
+on:
+  workflow_dispatch:  # Se ejecuta manualmente desde GitHub
+    inputs:
+      deployment_dir:
+        description: 'Directorio principal de despliegue'
+        required: true
+        default: 'deployments/apicore-gm-client'
+
+jobs:
+  # TRABAJO 1: CREAR INFRAESTRUCTURA CON TERRAFORM
+  create-infrastructure:
+    name: Crear Infraestructura Digital Ocean
+    runs-on: ubuntu-latest
+
+    # Variables de entorno necesarias
+    env:
+      TF_VAR_do_token: ${{ secrets.TF_VAR_DO_TOKEN }}
+      TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY_DO }}
+
+    # Directorio donde está la configuración de Terraform
+    defaults:
+      run:
+        working-directory: ${{ github.event.inputs.deployment_dir }}/terraform/digitalocean
+
+    # Valores que se pasarán al siguiente job
+    outputs:
+      instance_ip: ${{ steps.extract.outputs.instance_ip }}
+
+    steps:
+      # Paso 1: Obtener el código
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # Paso 3: Inicializar Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # Paso 4: Validar la configuración
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Paso 5: Crear un plan
+      - name: Terraform Plan
+        run: terraform plan
+
+      # Paso 6: Aplicar configuración (crear recursos)
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      # Paso 7: Obtener IP de la instancia creada
+      - name: Extract Public IP
+        id: extract
+        run: |
+          echo "instance_ip=$(terraform output -raw instance_public_ip)" >> $GITHUB_OUTPUT
+
+  # TRABAJO 2: CONFIGURAR LA INSTANCIA CON ANSIBLE
+  provision-instance:
+    name: Configurar Instancia con Ansible
+    needs: create-infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Instalar Ansible
+      - name: Install Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      # Paso 2: Obtener el código
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Paso 3: Preparar clave SSH para conexión
+      - name: Write SSH Private Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY_DO }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      # Paso 4: Ejecutar Ansible para configurar la instancia
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_ROLES_PATH: roles
+        run: |
+          cd ${{ github.event.inputs.deployment_dir }}/ansible 
+          
+          # Crear archivo de variables dinámicamente
+          cat > vars.yml << EOF
+          ---
+          workspace_root: ${{ github.workspace }}
+          deployment_dir: ${{ github.event.inputs.deployment_dir }}
+          
+          # Variables de base de datos (Modificar según tus secretos)
+          postgres_user: ${{ secrets.POSTGRES_USER }}
+          postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          postgres_db: ${{ secrets.POSTGRES_DB }}
+          mongo_username: ${{ secrets.MONGO_USERNAME }}
+          mongo_password: ${{ secrets.MONGO_PASSWORD }}
+          EOF
+          
+          # Ejecutar Ansible con el archivo de variables
+          ansible-playbook playbooks/deploy_cloud.yml \
+            -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
+            --user root \
+            --private-key ${{ github.workspace }}/private_key.pem \
+            --ssh-extra-args "-o StrictHostKeyChecking=no" \
+            -e @vars.yml
+      
+      # Paso 5: Eliminar la clave SSH
+      - name: Cleanup SSH Key
+        run: rm -f private_key.pem

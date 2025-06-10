@@ -14,8 +14,8 @@
     # Nombre del proyecto
     project_name: "apicore-gm-client"
     
-    # Directorio raíz del proyecto
-    project_root: "/home/ubuntu/{{ project_name }}"
+    # Directorio raíz del proyecto ('/root/{{ project_name }}' para Digital Ocean, '/home/ubuntu/{{ project_name }}' para AWS)
+    project_root: "/root/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
