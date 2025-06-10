@@ -113,7 +113,7 @@ jobs:
             --user root \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
-            -e @vars.yml -vvv
+            -e @vars.yml -vvvv
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key

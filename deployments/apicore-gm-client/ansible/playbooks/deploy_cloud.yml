@@ -98,15 +98,30 @@
           rm -f /var/lib/dpkg/lock-frontend
         fi
       changed_when: false
+    
+    - name: Verificar si hay procesos bloqueando APT
+      shell: ps aux | grep -i apt | grep -v grep
+      register: apt_processes
+      changed_when: false
+      failed_when: false
+
+    - name: Mostrar procesos de APT encontrados
+      debug:
+        var: apt_processes.stdout_lines
+      when: apt_processes.stdout != ""
+    
+    - name: Esperar si hay procesos APT en ejecución
+      wait_for:
+        timeout: 30
+      when: apt_processes.stdout != ""
 
     - name: Actualizar caché de APT antes de cualquier otra tarea
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
+      shell: apt-get update -qq
       register: apt_update
-      retries: 3
-      delay: 10
+      retries: 5
+      delay: 15
       until: apt_update is success
+      changed_when: false
     
   roles:
     - python
