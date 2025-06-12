@@ -22,7 +22,7 @@ resource "digitalocean_droplet" "app" {
   name   = "apicore-gm-client"         # Nombre del Droplet
   region = "nyc3"                      # Región donde se creará (Nueva York 3)
   size   = "s-1vcpu-1gb"               # Tamaño del Droplet (1 vCPU, 1GB RAM, elegible para prueba gratuita)
-  image  = "ubuntu-22-04-x64"          # Imagen del sistema operativo (Ubuntu 22.04 LTS)
+  image  = "ubuntu-20-04-x64"          # Imagen del sistema operativo (Ubuntu 22.04 LTS)
   ssh_keys = [var.inline_public_key]   # ID de la clave SSH que se usará para acceder
 
   tags = ["apicore-gm-client-droplet"] # Etiquetas para organizar recursos
