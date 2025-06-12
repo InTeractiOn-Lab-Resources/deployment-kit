@@ -2,7 +2,7 @@
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN DIGITAL OCEAN
 # Descripción: Crea infraestructura en Digital Ocean (Droplet) y despliega aplicaciones
 # ========================================================
-name: Despliegue Digital Ocean de APICore-GM-Client
+name: Despliegue Digital Ocean APICore-GM-Client
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
