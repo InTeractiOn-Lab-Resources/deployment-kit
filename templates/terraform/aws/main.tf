@@ -16,33 +16,20 @@ resource "aws_key_pair" "default" {
 
 # Definición de la instancia EC2
 resource "aws_instance" "app" {
-  ami           = var.ami_id            # ID de la AMI (Ubuntu 22.04 por defecto)
-  instance_type = var.instance_type     # Tipo de instancia (t2.micro por defecto)
+  ami           = var.ami_id                              # ID de la AMI (Ubuntu 22.04 por defecto)
+  instance_type = var.instance_type                       # Tipo de instancia (t2.micro por defecto)
   key_name      = aws_key_pair.default.key_name
   vpc_security_group_ids = [aws_security_group.app_sg.id]
 
   tags = {
-    Name = "apicore-gm-client-instance"           # Nombre de la instancia en consola AWS
+    Name = "app-instance"                   # Nombre de la instancia en consola AWS
   }
 }
-
-# Elastic IP (comentada por defecto)
-# Descomenta este bloque si necesitas una IP fija para asociar con un dominio (aumenta el costo)
-/*
-resource "aws_eip" "app_eip" {
-  instance = aws_instance.app.id
-  domain   = "vpc"
-  
-  tags = {
-    Name = "appname-eip"
-  }
-}
-*/
 
 # Grupo de seguridad para controlar el tráfico de red
 resource "aws_security_group" "app_sg" {
-  name        = "apicore-gm-client-security-group"
-  description = "Allow SSH, HTTP and HTTPS access"
+  name        = "app-security-group"
+  description = "Permite acceso SSH, HTTP y HTTPS"
 
   # Regla para permitir conexiones SSH
   ingress {
@@ -50,7 +37,7 @@ resource "aws_security_group" "app_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]         # Esto es necesario para conectarse con GitHub Actions, despues se debe restringir manualmente.
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Regla para permitir tráfico HTTP
@@ -80,7 +67,7 @@ resource "aws_security_group" "app_sg" {
   }
 
   tags = {
-    Name = "apicore-gm-client-sg"   # Nombre del grupo de seguridad en consola AWS
+    Name = "app-sg"   # Nombre del grupo de seguridad en consola AWS
   }
 }
 
@@ -95,8 +82,6 @@ resource "aws_security_group" "app_sg" {
 #    - Tags: Modifica los tags de la instancia y el grupo de seguridad según los nombres que tu quieras.
 #    - Región AWS, Tipo de instancia, y AMI: Modifica en variables.tf para elegir los recursos que prefieras.
 #    - Puertos: Añade más reglas 'ingress' para abrir puertos adicionales
-#    - Elastic IP: Descomenta el bloque aws_eip si necesitas una IP fija para tu instancia.
-#                  Puedes asociar un dominio personalizado con la Elastic IP si lo deseas, verifica la sección de variables.
 #
 # 3. SEGURIDAD IMPORTANTE
 #    - Se requiere cidr_blocks = ["0.0.0.0/0"] para conectarse con SSH a GitHub Actions.

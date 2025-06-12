@@ -15,22 +15,3 @@ output "key_pair_name" {
   description = "Nombre del key pair creado en AWS"
   value = aws_key_pair.default.key_name
 }
-
-/*
-# IP Elástica asignada (solo si está habilitada)
-output "elastic_ip" {
-  description = "Elastic IP asignada a la instancia"
-  value       = aws_eip.app_eip.public_ip
-  depends_on = [aws_eip.app_eip]
-}
-
-# Dominio configurado (si se especificó)
-output "domain_name" {
-  description = "Dominio asociado con la Elastic IP"
-  value       = var.domain_name != "" ? var.domain_name : "No domain configured"
-}
-*/
-
-# NOTA:
-# Descomentar los bloques de Elastic IP y dominio si se necesita una IP fija y un dominio personalizado.
-# De lo contrario, no se modifica este archivo y los bloques se mantienen comentados.
