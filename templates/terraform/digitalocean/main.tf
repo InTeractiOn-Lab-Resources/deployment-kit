@@ -67,3 +67,35 @@ resource "digitalocean_firewall" "app_firewall" {
   # Asignar el firewall al Droplet
   droplet_ids = [digitalocean_droplet.app.id]
 }
+
+# INSTRUCCIONES
+# 1. REQUISITOS
+#    - Cuenta de DigitalOcean activa
+#    - Token de API de DigitalOcean con permisos adecuados
+#    - Par de claves generadas en tu máquina local
+#    - La clave publica se añade en SSH Keys de DigitalOcean
+#    - En GitHub Actions se requiere tener definidos los secretos correspondientes.
+#
+# 2. PERSONALIZACIÓN
+#    - Nombre y Tags: Modifica el nombre del Droplet y los tags según tu proyecto
+#    - Región: Cambia "nyc3" por otra región de DigitalOcean si prefieres otro centro de datos
+#    - Tamaño: Modifica "s-1vcpu-1gb" por otro tamaño si necesitas más recursos
+#    - Imagen: Por defecto usa Ubuntu 22.04, puedes cambiarla según tus necesidades
+#    - Puertos: Añade más reglas 'inbound_rule' para abrir puertos adicionales
+#
+# 3. SEGURIDAD IMPORTANTE
+#    - La configuración actual permite acceso SSH desde cualquier IP (0.0.0.0/0)
+#      Después de la creación, restringe el acceso SSH por seguridad (solo si no usaras GitHub Actions)
+#    - Los puertos 80 y 443 están abiertos para permitir tráfico web
+#
+# 4. WORKFLOW DE GITHUB ACTIONS
+#    - Este template está diseñado para funcionar con el workflow terraform-ansible.yml
+#    - Después de crear la infraestructura, el workflow usa Ansible para configurar el Droplet
+#
+# 5. OUTPUTS
+#    - Al ejecutar Terraform, se mostrará:
+#      * instance_public_ip: La IP pública para conectarte al Droplet
+#
+# NOTA:
+# - Los Droplets de tamaño s-1vcpu-1gb son los más económicos pero tienen recursos limitados
+#   Considera aumentar el tamaño para aplicaciones en producción o que requieran más recursos
