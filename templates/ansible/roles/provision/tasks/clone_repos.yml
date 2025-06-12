@@ -91,7 +91,7 @@
 # Copiar el docker-compose.yml existente
 - name: Copiar docker-compose.yml existente
   copy:
-    src: "{{ local_files_dir }}/docker-compose-build.yml"
+    src: "{{ local_files_dir }}/docker-compose.yml"
     dest: "{{ project_root }}/docker-compose.yml"
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
