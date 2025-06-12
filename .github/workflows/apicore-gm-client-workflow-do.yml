@@ -2,7 +2,7 @@
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN DIGITAL OCEAN
 # Descripción: Crea infraestructura en Digital Ocean (Droplet) y despliega aplicaciones
 # ========================================================
-name: Despliegue APICore-GM-Client en Digital Ocean
+name: Despliegue Digital Ocean de APICore-GM-Client
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -71,6 +71,10 @@ jobs:
     needs: create-infrastructure
     runs-on: ubuntu-latest
 
+    env:
+      # Usuario SSH para la instancia (Digital Ocean: root, AWS: ubuntu)
+      SSH_USER: root
+
     steps:
       # Paso 1: Instalar Ansible
       - name: Install Ansible
@@ -85,13 +89,6 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY_DO }}" > private_key.pem
           chmod 600 private_key.pem
-      
-      # Paso 3.5: Verificar la conexión SSH directamente (DEBUG)
-      - name: Test SSH Connection
-        run: |
-          echo "Esperando 30 segundos para que el sistema esté listo..."
-          sleep 30
-          ssh -i private_key.pem -o StrictHostKeyChecking=no root@${{ needs.create-infrastructure.outputs.instance_ip }} "echo SSH connection successful && ls -la / && python3 --version"
 
       # Paso 4: Ejecutar Ansible para configurar la instancia
       - name: Run Ansible Playbook
@@ -105,6 +102,9 @@ jobs:
           ---
           workspace_root: ${{ github.workspace }}
           deployment_dir: ${{ github.event.inputs.deployment_dir }}
+
+          # Usuario remoto para determinar la ruta del proyecto
+          remote_user: ${{ env.SSH_USER }}
           
           # Variables de base de datos (Modificar según tus secretos)
           postgres_user: ${{ secrets.POSTGRES_USER }}
@@ -117,10 +117,10 @@ jobs:
           # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_cloud.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
-            --user root \
+            --user ${{ env.SSH_USER }} \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
-            -e @vars.yml -vvvv
+            -e @vars.yml
       
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key

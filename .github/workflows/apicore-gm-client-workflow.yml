@@ -2,7 +2,7 @@
 # WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
 # Descripción: Crea infraestructura en AWS y despliega aplicaciones
 # ========================================================
-name: Despliegue APICore-GM-Client en AWS
+name: Despliegue AWS APICore-GM-Client
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -27,7 +27,7 @@ jobs:
     # Directorio donde está la configuración de Terraform
     defaults:
       run:
-        working-directory: ${{ github.event.inputs.deployment_dir }}/terraform
+        working-directory: ${{ github.event.inputs.deployment_dir }}/terraform/aws
 
     # Valores que se pasarán al siguiente job
     outputs:
@@ -72,6 +72,10 @@ jobs:
     needs: create-infrastructure
     runs-on: ubuntu-latest
 
+    env:
+      # Usuario SSH para la instancia (Digital Ocean: root, AWS: ubuntu)
+      SSH_USER: ubuntu
+
     steps:
       # Paso 1: Instalar Ansible
       - name: Install Ansible
@@ -99,6 +103,9 @@ jobs:
           ---
           workspace_root: ${{ github.workspace }}
           deployment_dir: ${{ github.event.inputs.deployment_dir }}
+
+          # Usuario remoto para determinar la ruta del proyecto
+          remote_user: ${{ env.SSH_USER }}
           
           # Variables de base de datos (Modificar según tus secretos)
           postgres_user: ${{ secrets.POSTGRES_USER }}
@@ -111,7 +118,7 @@ jobs:
           # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_ec2_clone_repos.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
-            --user ubuntu \
+            --user ${{ env.SSH_USER }} \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
             -e @vars.yml
@@ -119,47 +126,3 @@ jobs:
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
-
-# INSTRUCCIONES DE USO:
-# 
-# 1. PREPARACIÓN:
-#    a) Crea estos SECRETOS en tu repositorio (Settings > Secrets > Actions):
-#       - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
-#       - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
-#       - INLINE_PUBLIC_KEY: Contenido de tu archivo id_rsa.pub
-#       - SSH_PRIVATE_KEY: Contenido de tu archivo id_rsa.pem
-#       - Variables de entorno para bases de datos (ejemplo: POSTGRES_USER, POSTGRES_PASSWORD, etc.)
-#
-#    b) Modifica el valor por defecto del directorio principal según tu organización:
-#       - Edita la sección default de deployment-dir y cambia 'deployments/app' por el directorio que utilizarás para tu proyecto.
-#
-#    c) Organiza tu repositorio con esta estructura para los archivos de despliegue:
-#       /{directorio_principal}/    (Ej: deployments/app)
-#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
-#          /ansible/         - Directorio base de Ansible
-#             /inventory/
-#             /playbooks/
-#             /roles/
-#          /docker-compose.yml
-#
-#      *Asegúrate de que tu archivo docker-compose.yml esté en el directorio especificado.
-#       Si necesitas archivos adicionales (como init.sql), colócalos en el mismo directorio junto al docker-compose.yml.
-#
-#    c) Modificar variables de bases de datos:
-#       En el PASO 4 del trabajo "Configurar Instancia con Ansible",
-#       modifica las variables de entorno de bases de datos o puedes añadir más variables según tus necesidades.
-#
-# 2. EJECUCIÓN:
-#    a) Ve a la pestaña "Actions" en GitHub
-#    b) Selecciona "Despliegue Automatizado AWS"
-#    c) Haz clic en "Run workflow" para iniciar el despliegue
-#
-# 3. RESULTADOS:
-#    - En los logs verás la IP pública de tu instancia
-#    - Podrás acceder a tu aplicación en: https://IP-DE-INSTANCIA o https://DOMINIO (o HTTP si no tienes SSL)
-#    - Para SSH: ssh -i id_rsa.pem ubuntu@IP-DE-INSTANCIA
-#
-# 4. SEGURIDAD (IMPORTANTE):
-#    - Una vez desplegado, limita los puertos abiertos en el Security Group
-#      dejando solo HTTP (80), HTTPS (443) y SSH (22) desde tu IP, o elimina el puerto SSH si no lo necesitas.
-#    - Actualiza regularmente tu instancia con: sudo apt update && sudo apt upgrade

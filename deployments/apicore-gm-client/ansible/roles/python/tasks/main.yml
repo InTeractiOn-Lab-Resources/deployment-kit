@@ -4,20 +4,12 @@
 # Descripción: Instala Python y dependencias necesarias para Docker y gestión de contenedores
 # =====================================
 
-- name: Ejecutar apt-get update manualmente con timeout
-  shell: timeout 60s apt-get update
-  register: apt_update_result
-  ignore_errors: true
-  become: true
-
-- name: Mostrar resultado de apt-get update
-  debug:
-    var: apt_update_result
-
+# Instalar Python 3
 - name: Asegurar que Python 3 esté instalado
   apt:
     name: python3
     state: present
+    update_cache: yes
   become: true
 
 # Instalar pip3 para gestión de paquetes Python

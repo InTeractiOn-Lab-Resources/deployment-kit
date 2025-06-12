@@ -13,9 +13,12 @@
     # ----------------------------------
     # Nombre del proyecto
     project_name: "apicore-gm-client"
-    
-    # Directorio raíz del proyecto ('/root/{{ project_name }}' para Digital Ocean, '/home/ubuntu/{{ project_name }}' para AWS)
-    project_root: "/root/{{ project_name }}"
+
+    # Usuario remoto (pasado desde el workflow)
+    remote_user: "{{ remote_user | default('root') }}"
+  
+    # Directorio raíz del proyecto (se ajusta automáticamente según el usuario)
+    project_root: "{{ '/home/' + remote_user if remote_user != 'root' else '/root' }}/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
@@ -80,30 +83,6 @@
     # admin_email: "carolina.antillanca@usach.cl"
     # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
     # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
-  
-  pre_tasks:
-    - name: Esperar a que dpkg y apt estén libres (hasta 3 minutos)
-      shell: |
-        echo "Esperando a que APT/dpkg estén libres..."
-        for i in $(seq 1 36); do
-          if fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
-            fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
-            fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
-            fuser /var/cache/apt/archives/lock >/dev/null 2>&1; then
-            echo "Bloqueado, esperando..."
-            sleep 5
-          else
-            echo "APT libre, continuando..."
-            exit 0
-          fi
-        done
-        echo "Timeout esperando que APT se libere"
-        exit 1
-      register: wait_apt
-      retries: 1
-      ignore_errors: false
-      changed_when: false
-      become: true
 
   roles:
     - python
