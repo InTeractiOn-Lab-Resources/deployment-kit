@@ -4,6 +4,33 @@
 # Descripción: Instala Python y dependencias necesarias para Docker y gestión de contenedores
 # =====================================
 
+- name: Verificar si hay procesos APT en ejecución (diagnóstico)
+  shell: |
+    pgrep -ax apt || echo "No hay procesos APT"
+  register: apt_process_check
+  ignore_errors: true
+  changed_when: false
+  become: true
+
+- name: Mostrar procesos APT encontrados (si hay)
+  debug:
+    var: apt_process_check.stdout_lines
+
+# Esperar hasta que no haya procesos APT bloqueando (bloqueo común en instancias nuevas de Digital Ocean)
+- name: Esperar hasta que APT esté libre
+  shell: |
+    while pgrep -x apt || fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+          fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+          fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+      echo "Esperando que se liberen los locks de APT..."
+      sleep 5
+    done
+  retries: 36  # 36 * 5s = 3 minutos máx
+  delay: 5
+  register: apt_wait
+  until: apt_wait.rc == 0
+  become: true
+
 # Instalar Python 3
 - name: Asegurar que Python 3 esté instalado
   apt:
