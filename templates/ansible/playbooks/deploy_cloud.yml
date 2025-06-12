@@ -1,10 +1,10 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN AWS
-# Descripción: Configura una instancia EC2 de AWS (con GitHub Actions) para ejecutar la aplicación
+# PLAYBOOK: DESPLIEGUE EN LA NUBE
+# Descripción: Configura una instancia en la nube (con GitHub Actions) para ejecutar la aplicación
 # =====================================
 
-- name: Despliegue en instancia EC2 AWS
+- name: Despliegue en la nube 
   hosts: all
   become: true
   
@@ -14,8 +14,11 @@
     # Nombre del proyecto
     project_name: "app"
     
-    # Directorio raíz del proyecto
-    project_root: "/home/ubuntu/{{ project_name }}"
+    # Usuario remoto (pasado desde el workflow)
+    remote_user: "{{ remote_user | default('root') }}"
+  
+    # Directorio raíz del proyecto (se ajusta automáticamente según el usuario)
+    project_root: "{{ '/home/' + remote_user if remote_user != 'root' else '/root' }}/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: false
@@ -60,15 +63,26 @@
         tag: "latest"
         port: 3000
         env_var: "CLIENT_IMAGE"
+
+    # Repositorios a clonar (solo necesario cuando clone_repos: true)
+    service_repos:
+      - name: "api-core"  # Nombre de la carpeta donde se clonará
+        url: "https://github.com/infra-sandbox/api-core-test.git"
+        branch: "main"
+        env_var: "API_CORE_PATH"
+        service: "core"  # Debe coincidir con un servicio en la sección 'services'
       
-      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
-      # - name: "nuevo_servicio"
-      #   type: "api"
-      #   image: "nueva/imagen"
-      #   tag: "v1"
-      #   port: 3003
-      #   env_var: "NUEVO_SERVICIO_IMAGE"
-      #   api_prefix: "nuevo-api"
+      - name: "api-gm"
+        url: "https://github.com/infra-sandbox/api-gm-test.git"
+        branch: "main"
+        env_var: "API_GM_PATH"
+        service: "gm"
+      
+      - name: "client"
+        url: "https://github.com/infra-sandbox/client-test.git"
+        branch: "main"
+        env_var: "CLIENT_PATH"
+        service: "client"
 
     # Variables globales de entorno (inyectadas desde GitHub Secrets) (modifica a tu conveniencia)
     global_env_vars:
@@ -105,26 +119,44 @@
 #
 #    - name: "nuevo-servicio"          # Nombre único del servicio
 #      type: "api"                     # Tipo: api o frontend
-#      image: "usuario/nueva-imagen"   # Imagen Docker
-#      tag: "latest"                   # Tag de la imagen
+#      image: "usuario/nueva-imagen"   # Imagen Docker (solo si clone_repos: false)
+#      tag: "latest"                   # Tag de la imagen (solo si clone_repos: false)
 #      port: 3003                      # Puerto en el host
-#      container_port: 3003            # Puerto dentro del contenedor (opcional)
 #      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable en el .env
 #      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api, si es frontend, no es necesario)
-#      env_vars:                       # Variables de entorno específicas (opcional)
-#        VARIABLE1: "valor1"
-#        VARIABLE2: "valor2"
 #
-# 2. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
+# 2. MODO DE DESPLIEGUE:
+#    El playbook soporta dos modos de despliegue controlados por la variable 'clone_repos':
+#
+#    a) clone_repos: false (RECOMENDADO)
+#       - Usa imágenes Docker preconstruidas
+#       - Requiere que TODOS los servicios tengan 'image' y 'tag' definidos
+#       - NO requiere configurar 'service_repos'
+#       - Más rápido y más estable para producción
+#
+#    b) clone_repos: true
+#       - Clona los repositorios y construye las imágenes en la instancia
+#       - NO definir 'image' ni 'tag' en los servicios
+#       - REQUIERE configurar 'service_repos' con todos los repositorios
+#       - Ejemplo de configuración de 'service_repos':
+#
+#         service_repos:
+#           - name: "api-core"             # Nombre de la carpeta donde se clonará
+#             url: "https://github.com/tu-org/api-core.git"
+#             branch: "main"               # Rama a clonar
+#             env_var: "API_CORE_PATH"     # Variable para el .env
+#             service: "core"              # Debe coincidir con el 'name' en la sección 'services'
+#
+# 3. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
 #    - Específicas de un servicio: Añádelas dentro de env_vars en el servicio
 #    - Globales para todos: Añádelas en global_env_vars
 #    - Puedes usar secretos de GitHub Actions para estas variables.
 #
-# 3. CONFIGURACIÓN DE NGINX:
+# 4. CONFIGURACIÓN DE NGINX:
 #    - Los servicios tipo "api" generan automáticamente una ruta en Nginx usando api_prefix
 #    - Un único servicio tipo "frontend" será accesible en la ruta raíz (/)
 #
-# 4. SECRETOS EN GITHUB ACTIONS PARA BASES DE DATOS:
+# 5. SECRETOS EN GITHUB ACTIONS PARA BASES DE DATOS:
 #    Ajusta los nombres según tu configuración, este es un ejemplo:
 #    - POSTGRES_USER: Usuario para PostgreSQL
 #    - POSTGRES_PASSWORD: Contraseña para PostgreSQL

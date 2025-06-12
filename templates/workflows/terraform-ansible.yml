@@ -1,8 +1,8 @@
 # ========================================================
-# WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN AWS
-# Descripción: Crea infraestructura en AWS y despliega aplicaciones (Terraform + Ansible)
+# WORKFLOW PARA DESPLIEGUE AUTOMATIZADO EN LA NUBE
+# Descripción: Crea infraestructura básica en AWS/DigitalOcean y despliega la aplicación (Terraform + Ansible)
 # ========================================================
-name: Despliegue automatizado en AWS
+name: Despliegue automatizado en la nube
 
 on:
   workflow_dispatch:  # Se ejecuta manualmente desde GitHub
@@ -15,14 +15,19 @@ on:
 jobs:
   # TRABAJO 1: CREAR INFRAESTRUCTURA CON TERRAFORM
   create-infrastructure:
-    name: Crear Infraestructura AWS
+    name: Crear Infraestructura
     runs-on: ubuntu-latest
 
-    # Variables de entorno necesarias
+    # Variables de entorno necesarias (eliminar las que no uses)
     env:
+      # Variables DigitalOcean
+      TF_VAR_do_token: ${{ secrets.DO_TOKEN }}
+      TF_VAR_inline_public_key: ${{ secrets.DO_INLINE_PUBLIC_KEY }}
+
+      # Variables AWS
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      TF_VAR_inline_public_key: ${{ secrets.INLINE_PUBLIC_KEY }}
+      TF_VAR_inline_public_key: ${{ secrets.AWS_INLINE_PUBLIC_KEY }}
 
     # Directorio donde está la configuración de Terraform
     defaults:
@@ -72,6 +77,12 @@ jobs:
     needs: create-infrastructure
     runs-on: ubuntu-latest
 
+    env:
+      # Usuario SSH para la instancia (Digital Ocean: root, AWS: ubuntu)
+      SSH_USER: ubuntu
+      # Ruta de roles de Ansible
+      ANSIBLE_ROLES_PATH: roles
+
     steps:
       # Paso 1: Instalar Ansible
       - name: Install Ansible
@@ -89,8 +100,6 @@ jobs:
 
       # Paso 4: Ejecutar Ansible para configurar la instancia
       - name: Run Ansible Playbook
-        env:
-          ANSIBLE_ROLES_PATH: roles
         run: |
           cd ${{ github.event.inputs.deployment_dir }}/ansible 
           
@@ -99,6 +108,9 @@ jobs:
           ---
           workspace_root: ${{ github.workspace }}
           deployment_dir: ${{ github.event.inputs.deployment_dir }}
+
+          # Usuario remoto para determinar la ruta del proyecto
+          remote_user: ${{ env.SSH_USER }}
           
           # Variables de base de datos (Modificar según tus secretos)
           postgres_user: ${{ secrets.POSTGRES_USER }}
@@ -109,9 +121,9 @@ jobs:
           EOF
           
           # Ejecutar Ansible con el archivo de variables
-          ansible-playbook playbooks/deploy_ec2.yml \
+          ansible-playbook playbooks/deploy_cloud.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
-            --user ubuntu \
+            --user ${{ env.SSH_USER }} \
             --private-key ${{ github.workspace }}/private_key.pem \
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
             -e @vars.yml
@@ -120,52 +132,76 @@ jobs:
       - name: Cleanup SSH Key
         run: rm -f private_key.pem
 
-# INSTRUCCIONES DE USO:
+# INSTRUCCIONES:
 # 
-# 1. PREPARACIÓN:
-#    a) Crea estos SECRETOS en tu repositorio (Settings > Secrets > Actions):
-#       - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
-#       - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
-#       - INLINE_PUBLIC_KEY: Contenido de tu archivo id_rsa.pub
-#       - SSH_PRIVATE_KEY: Contenido de tu archivo id_rsa.pem
-#       - Variables de entorno para bases de datos (ejemplo: POSTGRES_USER, POSTGRES_PASSWORD, etc.)
+# 1. PREPARACIÓN DE SECRETOS:
+#    Crea estos SECRETOS en tu repositorio (Settings > Secrets > Actions):
 #
-#    b) Modifica el valor por defecto del directorio principal según tu organización:
-#       - Edita la sección default de deployment-dir y cambia 'deployments/app' por el directorio que utilizarás para tu proyecto.
+#    Para AWS:
+#    - AWS_ACCESS_KEY_ID: Tu ID de clave de acceso AWS
+#    - AWS_SECRET_ACCESS_KEY: Tu clave secreta AWS
+#    - AWS_INLINE_PUBLIC_KEY: Contenido de tu archivo id_rsa.pub (clave pública) para AWS
+#    - SSH_PRIVATE_KEY: Clave SSH privada para conectarse a la instancia
 #
-#    c) Organiza tu repositorio con esta estructura para los archivos de despliegue:
+#    Para DigitalOcean:
+#    - DO_TOKEN: Token de API de DigitalOcean
+#    - DO_INLINE_PUBLIC_KEY: Contenido de tu archivo id_rsa.pub (clave pública) para DigitalOcean
+#    - SSH_PRIVATE_KEY: Fingerprint de la clave SSH privada añadida a DigitalOcean
+#
+#    Variables que necesites para el .env (EJEMPLOS - personaliza según tu aplicación):
+#    - POSTGRES_USER: Usuario de PostgreSQL
+#    - POSTGRES_PASSWORD: Contraseña de PostgreSQL
+#    - POSTGRES_DB: Nombre de la base de datos PostgreSQL
+#    - MONGO_USERNAME: Usuario de MongoDB
+#    - MONGO_PASSWORD: Contraseña de MongoDB
+#
+#    * Debes añadirlas en el Job 2: provision-instance (Paso 4) > en el archivo vars.yml.
+#
+#    * Las variables para el .env se inyectarán en Ansible.
+#      Por lo tanto, también deben estar denfinidas en el playbook (playbooks/deploy_cloud.yml).
+#
+# 2. CONFIGURACIÓN DEL DIRECTORIO DE DESPLIEGUE:
+#    a) Modifica el valor por defecto del directorio principal según tu organización:
+#       - Edita la sección default de deployment-dir y cambia 'deployments/app' por el directorio que utilizarás.
+#
+#    b) Organiza tu repositorio con esta estructura para los archivos de despliegue:
 #       /{directorio_principal}/    (Ej: deployments/app)
-#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
-#          /ansible/         - Directorio base de Ansible
+#          /terraform/aws/      - Archivos de Terraform para AWS
+#          /terraform/digitalocean/ - Archivos de Terraform para DigitalOcean
+#          /ansible/            - Directorio base de Ansible
 #             /inventory/
 #             /playbooks/
 #             /roles/
 #          /docker-compose.yml
 #
-#      *Asegúrate de que tu archivo docker-compose.yml esté en el directorio especificado.
-#       Si necesitas archivos adicionales (como init.sql), colócalos en el mismo directorio junto al docker-compose.yml.
+# 3. CONFIGURACIÓN DEL WORKFLOW:
+#    a) En el trabajo "create-infrastructure", modifica la variable "working-directory" según la plataforma:
+#       - Para AWS: ${{ github.event.inputs.deployment_dir }}/terraform/aws
+#       - Para DigitalOcean: ${{ github.event.inputs.deployment_dir }}/terraform/digitalocean
 #
-#    c) Modificar variables de bases de datos:
-#       En el PASO 4 del trabajo "Configurar Instancia con Ansible",
-#       modifica las variables de entorno de bases de datos o puedes añadir más variables según tus necesidades.
+#    b) En el trabajo "provision-instance", modifica la variable "SSH_USER" según la plataforma:
+#       - Para AWS: SSH_USER: ubuntu
+#       - Para DigitalOcean: SSH_USER: root
 #
-# 2. EJECUCIÓN:
+# 4. EJECUCIÓN DEL WORKFLOW:
 #    a) Ve a la pestaña "Actions" en GitHub
-#    b) Selecciona "Despliegue Automatizado AWS"
-#    c) Haz clic en "Run workflow" para iniciar el despliegue
+#    b) Selecciona "Despliegue automatizado en la nube"
+#    c) Haz clic en "Run workflow"
 #
-# 3. RESULTADOS:
+# 5. RESULTADOS:
 #    - En los logs verás la IP pública de tu instancia
-#    - Podrás acceder a tu aplicación en: https://IP-DE-INSTANCIA o https://DOMINIO (o HTTP si no tienes SSL)
-#    - Para SSH: ssh -i id_rsa.pem ubuntu@IP-DE-INSTANCIA
+#    - Podrás acceder a tu aplicación en: http://IP-DE-INSTANCIA o https://DOMINIO
+#    - Para SSH: 
+#      * AWS: ssh -i id_rsa.pem ubuntu@IP-DE-INSTANCIA
+#      * DigitalOcean: ssh -i id_rsa.pem root@IP-DE-INSTANCIA
 #
-# 4. SEGURIDAD (IMPORTANTE):
-#    - Una vez desplegado, limita los puertos abiertos en el Security Group
-#      dejando solo HTTP (80), HTTPS (443) y SSH (22) desde tu IP o elimina el puerto SSH si no lo necesitas.
-#      El puerto SSH es necesario para conectarse con GitHub Actions, se recomienda eliminarlo después de la configuración.
+# 6. SEGURIDAD (IMPORTANTE):
+#    - Una vez desplegado, limita los puertos abiertos en el Security Group/Firewall
+#      [HTTP (80), HTTPS (443), SSH (22)]
 #    - Actualiza regularmente tu instancia con: sudo apt update && sudo apt upgrade
 #
-# NOTA IMPORTANTE:
-# - Este workflow está diseñado para ser ejecutado manualmente desde GitHub y como configuración inicial (no actualizar).
-#   Si se vuelve a ejecutar, se duplicará la instancia y los recursos. 
-#   Asegurate de eliminar la instancia anterior antes de volver a ejecutar el workflow.
+# NOTAS IMPORTANTE:
+# - Este workflow está diseñado para ser ejecutado manualmente y como configuración inicial.
+#   Si se vuelve a ejecutar, se duplicará la instancia y los recursos.
+# - Puedes eliminar del workflow las referencias a los secretos que no vayas a utilizar 
+#   (por ejemplo, si solo usas DigitalOcean, puedes eliminar las variables de AWS y viceversa).
