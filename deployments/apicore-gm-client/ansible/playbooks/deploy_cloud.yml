@@ -64,6 +64,7 @@
         tag: "latest"
         port: 3000
         env_var: "CLIENT_IMAGE"
+        frontend_prefix: "/"
 
     # Variables globales de entorno para todos los servicios (inyectadas desde GitHub Secrets)
     global_env_vars:

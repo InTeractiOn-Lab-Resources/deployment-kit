@@ -43,6 +43,7 @@
       - name: "client"
         type: "frontend"
         port: 3000
+        frontend_prefix: "/"
       
     # Repositorios a clonar
     service_repos:

@@ -51,6 +51,7 @@
         image: "thecariah/client-test"
         tag: "latest"
         port: 3000
+        frontend_prefix: "/"
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
