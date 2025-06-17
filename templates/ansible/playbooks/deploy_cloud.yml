@@ -63,6 +63,7 @@
         tag: "latest"
         port: 3000
         env_var: "CLIENT_IMAGE"
+        frontend_prefix: "/"
 
     # Repositorios a clonar (solo necesario cuando clone_repos: true)
     service_repos:
@@ -150,7 +151,9 @@
 #      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable para el .env (solo si clone_repos: false)
 #      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api)
 #
-#      IMPORTANTE: Para agregar el frontend debes omitir el campo api_prefix y cambiar el tipo a "frontend".
+#      IMPORTANTE: Para agregar el frontend debes cambiar el tipo a "frontend" y agregar frontend_prefix. 
+#                  Si no añades este campo, por defecto se usará "/" para la ruta del frontend.
+#                  Pero si tienes más de un frontend, debes definir un prefijo único para cada uno.
 #
 #    Para cuando clone_repos = true, también debes definir service_repos:
 #

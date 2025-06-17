@@ -49,6 +49,7 @@
         image: "thecariah/client-test"
         tag: "latest"
         port: 3000
+        frontend_prefix: "/"
       
       # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
       # - name: "nuevo_servicio"
@@ -150,7 +151,9 @@
 #      port: 3003                      # Puerto en el host
 #      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api)
 #
-#      IMPORTANTE: Para agregar el frontend debes omitir el campo api_prefix y cambiar el tipo a "frontend".
+#      IMPORTANTE: Para agregar el frontend debes cambiar el tipo a "frontend" y agregar frontend_prefix. 
+#                  Si no añades este campo, por defecto se usará "/" para la ruta del frontend.
+#                  Pero si tienes más de un frontend, debes definir un prefijo único para cada uno.
 #
 #    Para cuando clone_repos = true, también debes definir service_repos:
 #
