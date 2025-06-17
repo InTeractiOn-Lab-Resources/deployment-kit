@@ -18,6 +18,7 @@
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: true
+    force_build: true
 
     # Ruta a docker-compose.yml y .env
     docker_compose_path: "{{ project_root }}/docker-compose.yml"
@@ -31,7 +32,7 @@
       - name: "backend"
         type: "api"
         port: 3000
-        api_prefix: "backend"
+        api_prefix: "api"
       
       - name: "spa"
         type: "frontend"
@@ -41,7 +42,7 @@
       - name: "dashboard"
         type: "frontend"
         port: 9090
-        frontend_prefix: "dashboard"
+        # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
 
     # Repositorios para clonar
     service_repos:
@@ -63,13 +64,13 @@
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
     # Nombre del servidor (dominio de la VM o "_" para local)
-    server_name: "felucia.diinf.usach.cl"
+    server_name: "_"
     
     # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
-    enable_ssl: true
-    admin_email: "carolina.antillanca@usach.cl"
-    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    enable_ssl: false
+    #admin_email: "carolina.antillanca@usach.cl"
+    #ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    #ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - firewall
