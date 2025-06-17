@@ -6,7 +6,7 @@
 # =====================================
 
 - name: Despliegue en la nube 
-  hosts: local
+  hosts: all
   become: true
   
   vars:
