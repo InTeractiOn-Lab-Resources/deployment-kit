@@ -116,7 +116,9 @@
       group: "{{ ansible_user_id | default('ubuntu') }}"
       mode: '0644'
   
-  when: not (docker_compose_exists.stat.exists and env_file_exists.stat.exists)
+  when: 
+    - local_files_dir is defined
+    - not (docker_compose_exists.stat.exists and env_file_exists.stat.exists)
 
 # --- COMÚN PARA AMBOS FLUJOS ---
 # Levantar los contenedores (esto se hace igual en ambos casos)
