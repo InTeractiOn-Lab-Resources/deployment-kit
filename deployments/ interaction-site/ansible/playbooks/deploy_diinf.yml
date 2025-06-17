@@ -1,0 +1,80 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (Ubuntu)
+# Descripción: Configura una máquina para desplegar una aplicación
+# =====================================
+- name: Despliegue en VMs del DIINF o local
+  hosts: local
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "interaction-site"
+    
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
+    project_root: "{{ playbook_dir | dirname | dirname }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: true
+
+    # Ruta a docker-compose.yml y .env
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
+    env_file_path: "{{ project_root }}/.env"
+    
+    # CONFIGURACIÓN DE SERVICIOS DOCKER
+    # ---------------------------------
+    
+    # Definición de servicios
+    services:
+      - name: "backend"
+        type: "api"
+        port: 3000
+        api_prefix: "backend"
+      
+      - name: "spa"
+        type: "frontend"
+        port: 8080
+        frontend_prefix: "/"
+
+      - name: "dashboard"
+        type: "frontend"
+        port: 9090
+        frontend_prefix: "dashboard"
+
+    # Repositorios para clonar
+    service_repos:
+      - name: "interaction-backend"
+        url: "https://github.com/InTeractiOn-Sites/interaction-backend.git"
+        branch: "master"
+        service: "backend"
+      
+      - name: "interaction-spa"
+        url: "https://github.com/InTeractiOn-Sites/interaction-spa.git"
+        branch: "master"
+        service: "spa"
+      
+      - name: "interaction-dashboard"
+        url: "https://github.com/InTeractiOn-Sites/interaction-dashboard.git"
+        branch: "master"
+        service: "dashboard"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    server_name: "felucia.diinf.usach.cl"
+    
+    # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    
+  roles:
+    - firewall
+    - python
+    - docker
+    - { role: ssl, when: "enable_ssl | bool" }
+    - nginx
+    - provision

@@ -1,0 +1,31 @@
+---
+# =====================================
+# ROL: PROVISION
+# Descripción: Orquesta el despliegue de servicios usando Docker
+# =====================================
+
+# Usar imágenes preconstruidas de Docker Hub
+- name: Usar imágenes preconstruidas
+  include_tasks: use_prebuilt_images.yml
+  when: not clone_repos | default(false)
+  tags:
+    - provision
+    - docker
+
+# Clonar repositorios y construir imágenes localmente
+- name: Clonar repositorios y construir imágenes localmente
+  include_tasks: clone_repos.yml
+  when: clone_repos | default(false)
+  tags:
+    - provision
+    - docker
+    - clone
+
+# Una vez configurada la aplicación, verificar el estado
+- name: Verificar el estado de los contenedores
+  command: docker ps
+  register: docker_ps_output
+  changed_when: false
+  tags:
+    - provision
+    - status

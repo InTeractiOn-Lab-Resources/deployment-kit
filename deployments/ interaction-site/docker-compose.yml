@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./interaction-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  spa:
+    build: ./interaction-spa
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  dashboard:
+    build: ./interaction-dashboard
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
