@@ -114,7 +114,7 @@ jobs:
           EOF
           
           # Ejecutar Ansible con el archivo de variables
-          ansible-playbook playbooks/deploy_cloud.yml \
+          ansible-playbook playbooks/deploy_cloud_clone_repos.yml \
             -i "${{ needs.create-infrastructure.outputs.instance_ip }}," \
             --user ${{ env.SSH_USER }} \
             --private-key ${{ github.workspace }}/private_key.pem \
