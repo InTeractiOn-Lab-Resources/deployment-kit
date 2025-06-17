@@ -1,8 +1,8 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN LA NUBE (CONFIGURACIÓN PARA clone_repos: false)
+# PLAYBOOK: DESPLIEGUE EN LA NUBE (CONFIGURACIÓN PARA clone_repos: true)
 # Descripción: Configura una instancia en la nube (con GitHub Actions) para desplegar la aplicación
-#              Despliega usando imágenes preconstruidas en Docker Hub.
+#              Despliega clonando los repositorios y construyendo las imágenes localmente.
 # =====================================
 
 - name: Despliegue en la nube 
@@ -17,12 +17,12 @@
 
     # Usuario remoto (pasado desde el workflow)
     remote_user: "{{ remote_user | default('root') }}"
-  
+    
     # Directorio raíz del proyecto (se ajusta automáticamente según el usuario)
     project_root: "{{ '/home/' + remote_user if remote_user != 'root' else '/root' }}/{{ project_name }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
-    clone_repos: false
+    clone_repos: true
 
     # Variables para localizar archivos
     workspace_root: "{{ workspace_root }}"
@@ -37,33 +37,42 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
-    # Prefijo común para las imágenes Docker
-    docker_registry: ""
     
     # Definición de servicios
     services:
       - name: "core"
         type: "api"
-        image: "thecariah/api-core-test"
-        tag: "latest"
         port: 3001
-        env_var: "API_CORE_IMAGE"
         api_prefix: "api-core"
       
       - name: "gm"
         type: "api"
-        image: "thecariah/api-gm-test"
-        tag: "latest"
         port: 3002
-        env_var: "API_GM_IMAGE"
         api_prefix: "api-gm"
       
       - name: "client"
         type: "frontend"
-        image: "thecariah/client-test"
-        tag: "latest"
         port: 3000
-        env_var: "CLIENT_IMAGE"
+    
+    # Repositorios a clonar
+    service_repos:
+      - name: "api-core"
+        url: "https://github.com/infra-sandbox/api-core-test.git"
+        branch: "main"
+        env_var: "API_CORE_PATH"
+        service: "core"
+      
+      - name: "api-gm"
+        url: "https://github.com/infra-sandbox/api-gm-test.git"
+        branch: "main"
+        env_var: "API_GM_PATH"
+        service: "gm"
+      
+      - name: "client"
+        url: "https://github.com/infra-sandbox/client-test.git"
+        branch: "main"
+        env_var: "CLIENT_PATH"
+        service: "client"
 
     # Variables globales de entorno para todos los servicios (inyectadas desde GitHub Secrets)
     global_env_vars:
@@ -84,7 +93,7 @@
     # admin_email: "carolina.antillanca@usach.cl"
     # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
     # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
-
+    
   roles:
     - python
     - docker

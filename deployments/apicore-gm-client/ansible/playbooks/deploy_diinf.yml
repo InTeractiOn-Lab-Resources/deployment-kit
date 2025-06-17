@@ -1,11 +1,12 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL
-# Descripción: Configura una VM para ejecutar la aplicación usando archivos locales
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (CONFIGURACIÓN PARA clone_repos: false)
+# Descripción: Configura una máquina para desplegar una aplicación
+#              Despliega usando imágenes preconstruidas en Docker Hub.
 # =====================================
 
-- name: Despliegue manual en VM DIINF o local
-  hosts: all
+- name: Despliegue en VMs del DIINF o local
+  hosts: local
   become: true
   
   vars:
@@ -31,32 +32,32 @@
     
     # Definición de servicios
     services:
-      - name: "core"                     # Nombre interno del servicio
-        type: "api"                      # Tipo: api o frontend
-        port: 3001                       # Puerto en el host
-        api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
+      - name: "core"
+        type: "api"
+        image: "thecariah/api-core-test"
+        tag: "latest"
+        port: 3001
+        api_prefix: "api-core"
       
       - name: "gm"
         type: "api"
+        image: "thecariah/api-gm-test"
+        tag: "latest"
         port: 3002
         api_prefix: "api-gm"
       
       - name: "client"
         type: "frontend"
+        image: "thecariah/client-test"
+        tag: "latest"
         port: 3000
-      
-      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
-      # - name: "nuevo_servicio"
-      #   type: "api"
-      #   port: 3003
-      #   api_prefix: "nuevo-api"
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
     # Nombre del servidor (dominio de la VM o "_" para local)
     server_name: "felucia.diinf.usach.cl"
     
-    # Para SSL (opcional, solo si hay dominio)
+    # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
     enable_ssl: true
     admin_email: "carolina.antillanca@usach.cl"
     ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
@@ -69,66 +70,3 @@
     - { role: ssl, when: "enable_ssl | bool" }
     - nginx
     - provision
-
-# INSTRUCCIONES PARA DESPLIEGUE MANUAL EN DIINF O ENTORNO LOCAL:
-# 0. REQUISITOS:
-#    - Tener Ansible instalado.
-#    - Tener Git instalado.
-#
-# 1. PREPARACIÓN:
-#    a) Clona el repositorio donde se encuentra los archivos de despliegue (deployment-kit):
-#       git clone https://github.com/infra-sandbox/deployment-kit.git
-#    
-#    b) Navega a la ubicación de despliegue (donde están los archivos de Ansible, docker-compose, etc):
-#       cd deployment-kit/deployments/apicore-gm-client
-#
-#    c) Crea un archivo .env a partir del ejemplo:
-#       cp .env.example .env
-#       nano .env  # Edita las variables según tu configuración
-#
-#    d) Asegurate de tener esta organización de carpetas en tu repositorio:
-#       /{directorio_principal}/    (Ej: deployments/app)
-#          /terraform/       - Archivos de Terraform (main.tf, variables.tf, etc.)
-#          /ansible/         - Directorio base de Ansible
-#             /inventory/
-#             /playbooks/
-#             /roles/
-#          /docker-compose.yml
-#          /.env
-#
-# 2. EJECUCIÓN DEL PLAYBOOK:
-#    IMPORTANTE: Ejecuta el playbook desde el directorio principal del proyecto (donde estan los archivos de despliegue).
-#
-#    sudo ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook ansible/playbooks/deploy_diinf.yml -i ansible/inventory/hosts.ini
-#
-# 3. CONFIGURACIÓN DEL DOMINIO Y SSL:
-#    a) Para usar un dominio personalizado, modifica las siguientes variables:
-#       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
-#       - enable_ssl: true (para habilitar HTTPS)
-#       - admin_email: Tu email para certificados SSL
-#
-#    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
-#
-# 4. CÓMO AÑADIR SERVICIOS ADICIONALES:
-#    a) Para añadir un nuevo servicio, modifica la sección "services" añadiendo:
-#       - name: "nuevo_servicio"  # Un nombre único para el servicio
-#         type: "api"            # Tipo: "api" o "frontend"
-#         port: 3003             # Puerto en el host
-#         api_prefix: "nueva-api" # Ruta en Nginx (solo para tipo "api")
-#
-#    b) No olvides actualizar tu docker-compose.yml para incluir el nuevo servicio (solo si no lo tienes ya).
-#
-# 5. VERIFICACIÓN:
-#    Una vez completado el despliegue, accede a:
-#    - HTTP:  http://[tu-dominio-o-ip]/
-#    - HTTPS: https://[tu-dominio-o-ip]/ (si SSL está habilitado)
-#
-#    Microservicios disponibles:
-#    - Frontend: http(s)://[tu-dominio-o-ip]/
-#    - API Core: http(s)://[tu-dominio-o-ip]/api-core
-#    - API GM:   http(s)://[tu-dominio-o-ip]/api-gm
-#
-# NOTA:
-# Este playbook está diseñado para ejecutarse desde el directorio raíz del proyecto
-# donde se encuentran los archivos docker-compose.yml y .env. No se utiliza GitHub Actions,
-# sino que todo se ejecuta manualmente con Ansible desde tu máquina o servidor.

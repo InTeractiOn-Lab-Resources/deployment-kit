@@ -74,6 +74,7 @@ jobs:
     env:
       # Usuario SSH para la instancia (Digital Ocean: root, AWS: ubuntu)
       SSH_USER: root
+      ANSIBLE_ROLES_PATH: roles
 
     steps:
       # Paso 1: Instalar Ansible
@@ -92,8 +93,6 @@ jobs:
 
       # Paso 4: Ejecutar Ansible para configurar la instancia
       - name: Run Ansible Playbook
-        env:
-          ANSIBLE_ROLES_PATH: roles
         run: |
           cd ${{ github.event.inputs.deployment_dir }}/ansible 
           

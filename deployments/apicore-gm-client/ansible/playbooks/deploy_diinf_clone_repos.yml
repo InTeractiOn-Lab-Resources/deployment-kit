@@ -1,12 +1,12 @@
 ---
 # =====================================
 # PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (CONFIGURACIÓN PARA clone_repos: true)
-# Descripción: Configura una VM para ejecutar la aplicación usando archivos locales
-#              Despliega en modo "clone_repos" = true, es decir, clona los repositorios y construye las imágenes localmente.
+# Descripción: Configura una máquina para desplegar una aplicación
+#              Despliega clonando los repositorios y construyendo las imágenes localmente.
 # =====================================
 
-- name: Despliegue manual en VM DIINF o local
-  hosts: all
+- name: Despliegue en VMs del DIINF o local
+  hosts: local
   become: true
   
   vars:
@@ -27,8 +27,6 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
-    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
-    docker_registry: ""
     
     # Definición de servicios
     services:
@@ -51,19 +49,16 @@
       - name: "api-core"
         url: "https://github.com/infra-sandbox/api-core-test.git"
         branch: "main"
-        env_var: "API_CORE_PATH"
         service: "core"
       
       - name: "api-gm"
         url: "https://github.com/infra-sandbox/api-gm-test.git"
         branch: "main"
-        env_var: "API_GM_PATH"
         service: "gm"
       
       - name: "client"
         url: "https://github.com/infra-sandbox/client-test.git"
         branch: "main"
-        env_var: "CLIENT_PATH"
         service: "client"
     
     # CONFIGURACIÓN DE NGINX
@@ -71,7 +66,7 @@
     # Nombre del servidor (dominio de la VM o "_" para local)
     server_name: "felucia.diinf.usach.cl"
     
-    # Para SSL (opcional, solo si hay dominio)
+    # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
     enable_ssl: true
     admin_email: "carolina.antillanca@usach.cl"
     ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
