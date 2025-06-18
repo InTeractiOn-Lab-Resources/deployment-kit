@@ -5,7 +5,7 @@
 # =====================================
 
 - name: Despliegue en la nube 
-  hosts: local
+  hosts: all
   become: true
   
   vars:
@@ -26,6 +26,9 @@
     # Variables para localizar archivos
     workspace_root: "{{ workspace_root }}"
     deployment_dir: "{{ deployment_dir }}"
+
+    # Determina si el proyecto utiliza un archivo .env para el docker compose (modificar según tu caso)
+    use_env_file: true
     
     # Directorio local donde están los archivos a copiar (docker-compose.yml y otros archivos adicionales)
     local_files_dir: "{{ workspace_root }}/{{ deployment_dir }}"
@@ -105,6 +108,12 @@
     # ---------------------    
     # Nombre del servidor (dominio o "_" para local)
     server_name: "_"
+
+    # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+    # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+    # false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+    # Recomendación: Si los servicios no se comunican bien entre sí, o los assets no cargan, prueba cambiar este valor.
+    use_trailing_slash: true
     
     # Para SSL (enable_ssl: true -> con dominio, enable_ssl: false -> sin dominio)
     enable_ssl: false
@@ -139,7 +148,13 @@
 #       - NO definir 'image' ni 'tag' en los servicios
 #       - REQUIERE configurar 'service_repos' con los links de los repositorios
 #
-# 2. AÑADIR SERVICIOS:
+# 2. DEFINE SI USAS UN ARCHIVO .ENV PARA EL DOCKER COMPOSE:
+#    - Si tu proyecto usa un archivo .env, asegúrate de que 'use_env_file' esté en true.
+#      Recuerda crear el archivo .env de forma manual y previo a la ejecución del playbook.
+#
+#    - Si no usas .env, pon 'use_env_file' en false.
+#
+# 3. AÑADIR SERVICIOS:
 #    Agrega bloques como este dentro de services y modifica sus valores:
 #
 #   services:
@@ -152,8 +167,7 @@
 #      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api)
 #
 #      IMPORTANTE: Para agregar el frontend debes cambiar el tipo a "frontend" y agregar frontend_prefix. 
-#                  Si no añades este campo, por defecto se usará "/" para la ruta del frontend.
-#                  Pero si tienes más de un frontend, debes definir un prefijo único para cada uno.
+#                  Si tienes más de un frontend, debes definir un prefijo único para cada uno.
 #
 #    Para cuando clone_repos = true, también debes definir service_repos:
 #
@@ -164,22 +178,31 @@
 #      env_var: "NUEVO_SERVICIO_PATH"             # Nombre de variable para el .env
 #      service: "nuevo_servicio"                  # Debe coincidir con el 'name' en la sección 'services'
 #
-# 3. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
-#    - Específicas de un servicio: Añádelas dentro de env_vars en el service o service_repos (dependiendo del modo de despliegue)
+# 4. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
+#    - Específicas de un servicio: Añádelas dentro de env_var en el service o service_repos (dependiendo del modo de despliegue)
 #    - Globales para todos: Añádelas en global_env_vars (harcodeadas o inyectadas desde GitHub Secrets)
 #
-# 4. ARCHIVOS A COPIAR:
+# 5. ARCHIVOS A COPIAR:
 #    - Puedes añadir archivos adicionales a copiar al servidor en la sección additional_files.
 #    - Los archivos se copiarán desde el repositorio donde se ejecute el workflow al directorio raíz del proyecto en el servidor.
 #    - Si no necesitas archivos adicionales, puedes dejar sin definir esta variable o dejarla vacía.
 #
-# 5. CONFIGURACIÓN DEL DOMINIO Y SSL:
+# 6. CONFIGURACIÓN DEL DOMINIO Y SSL:
 #    a) Para usar un dominio personalizado, modifica las siguientes variables:
 #       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
 #       - enable_ssl: true (para habilitar HTTPS)
 #       - admin_email: Tu email para certificados SSL
 #
 #    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
+#
+# 7. CONFIGURACIÓN RUTA DE NGINX:
+#    Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+#     - use_trailing_slash: true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+#     - use_trailing_slash: false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+#
+#     Si no defines este valor, se usará true por defecto.
+#
+#     IMPORTANTE: Si los servicios no se comunican bien entre sí, prueba cambiar este valor.
 #
 # NOTA:
 # Este playbook está diseñado para ejecutarse en conjunto con el workflow de GitHub Actions y Terraform.

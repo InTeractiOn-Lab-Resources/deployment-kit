@@ -13,25 +13,27 @@
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0755'
 
-# Verificar si es un despliegue manual (los archivos ya existen)
-- name: Verificar si es un despliegue manual
+# Verificar si es un despliegue local (los archivos ya existen)
+- name: Verificar si es un despliegue local
   stat:
     path: "{{ project_root }}/docker-compose.yml"
   register: docker_compose_exists
-  
+
+# Verificar si el archivo .env ya existe (solo si use_env_file es true)
 - name: Verificar si el archivo .env ya existe
   stat:
     path: "{{ project_root }}/.env"
   register: env_file_exists
+  when: use_env_file | default(true)
 
 # --- FLUJO PARA DESPLIEGUE LOCAL (DIINF) ---
-# Si el archivo docker-compose.yml y .env ya existen, asumimos despliegue manual
-- name: Descargar imágenes Docker (despliegue manual)
+# Si el archivo docker-compose.yml ya existe, asumimos despliegue local
+- name: Descargar imágenes Docker (despliegue local)
   command: docker pull {{ item.image }}:{{ item.tag | default('latest') }}
   loop: "{{ services | selectattr('image', 'defined') | list }}"
   changed_when: true
   failed_when: false
-  when: docker_compose_exists.stat.exists and env_file_exists.stat.exists
+  when: docker_compose_exists.stat.exists
 
 # --- FLUJO PARA DESPLIEGUE EN NUBE (GitHub Actions) ---
 # Esto solo se ejecuta cuando NO es un despliegue manual
@@ -60,6 +62,7 @@
         - "Workspace root: {{ workspace_root | default('no definido') }}"
         - "Deployment dir: {{ deployment_dir | default('no definido') }}"
         - "Servicios definidos: {{ services | length }}"
+        - "Usar archivo .env: {{ use_env_file | default(true) }}"
 
   # Copiar docker-compose desde el repositorio local
   - name: Copiar docker-compose.yml desde el repositorio local
@@ -81,46 +84,61 @@
     loop: "{{ additional_files | default([]) }}"
     ignore_errors: yes  # Continuar si algún archivo no existe
 
-  # Generar el contenido del .env para los servicios
-  - name: Generar el contenido del archivo .env
-    set_fact:
-      env_vars_content: |
-        # Variables para las imágenes de servicios
-        {% for service in services %}
-        {% if service.image is defined and service.env_var is defined %}
-        {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
-        {% endif %}
-        {% endfor %}
-        
-        # Variables globales
-        {% for key, value in global_env_vars.items() %}
-        {{ key }}={{ value }}
-        {% endfor %}
-        
-        # Variables específicas por servicio
-        {% for service in services %}
-        {% if service.env_vars is defined %}
-        # {{ service.name | capitalize }} Variables
-        {% for key, value in service.env_vars.items() %}
-        {{ key }}={{ value }}
-        {% endfor %}
-        {% endif %}
-        {% endfor %}
+  # Creación del archivo .env solo si use_env_file es true
+  - block:
+    # Generar el contenido del .env para los servicios
+    - name: Generar el contenido del archivo .env
+      set_fact:
+        env_vars_content: |
+          # Variables para las imágenes de servicios
+          {% for service in services %}
+          {% if service.image is defined and service.env_var is defined %}
+          {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
+          {% endif %}
+          {% endfor %}
+          
+          {% if global_env_vars is defined %}
+          # Variables globales
+          {% for key, value in global_env_vars.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+          {% endif %}
+          
+          {% for service in services %}
+          {% if service.env_vars is defined %}
+          # Variables específicas por servicio
+          # {{ service.name | capitalize }} Variables
+          {% for key, value in service.env_vars.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
 
-  # Crear archivo .env con variables de entorno dinámicas
-  - name: Crear archivo .env con variables de entorno
-    copy:
-      dest: "{{ project_root }}/.env"
-      content: "{{ env_vars_content }}"
-      owner: "{{ ansible_user_id | default('ubuntu') }}"
-      group: "{{ ansible_user_id | default('ubuntu') }}"
-      mode: '0644'
+    # Crear archivo .env con variables de entorno dinámicas
+    - name: Crear archivo .env con variables de entorno
+      copy:
+        dest: "{{ project_root }}/.env"
+        content: "{{ env_vars_content }}"
+        owner: "{{ ansible_user_id | default('ubuntu') }}"
+        group: "{{ ansible_user_id | default('ubuntu') }}"
+        mode: '0644'
   
-  when: 
-    - local_files_dir is defined
-    - not (docker_compose_exists.stat.exists and env_file_exists.stat.exists)
+  when: >
+    use_env_file | default(true) and
+    local_files_dir is defined and
+    not docker_compose_exists.stat.exists
 
 # --- COMÚN PARA AMBOS FLUJOS ---
+# Crear el archivo .env vacío si use_env_file es false (evita error de Docker)
+- name: Crear .env vacío si use_env_file es false
+  copy:
+    dest: "{{ project_root }}/.env"
+    content: ""
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  when: not use_env_file | default(true)
+
 # Levantar los contenedores (esto se hace igual en ambos casos)
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
