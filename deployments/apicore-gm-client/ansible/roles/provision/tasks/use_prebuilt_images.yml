@@ -28,7 +28,7 @@
 
 # --- FLUJO PARA DESPLIEGUE LOCAL (DIINF) ---
 # Si el archivo docker-compose.yml ya existe, asumimos despliegue local
-- name: Descargar imágenes Docker (despliegue manual)
+- name: Descargar imágenes Docker (despliegue local)
   command: docker pull {{ item.image }}:{{ item.tag | default('latest') }}
   loop: "{{ services | selectattr('image', 'defined') | list }}"
   changed_when: true
