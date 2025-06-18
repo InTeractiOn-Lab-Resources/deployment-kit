@@ -13,6 +13,19 @@
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0755'
 
+# Verificar si es un despliegue local (los archivos ya existen)
+- name: Verificar si es un despliegue local
+  stat:
+    path: "{{ project_root }}/docker-compose.yml"
+  register: docker_compose_exists
+  
+# Verificar si el archivo .env ya existe (solo si use_env_file es true)
+- name: Verificar si el archivo .env ya existe
+  stat:
+    path: "{{ project_root }}/.env"
+  register: env_file_exists
+  when: use_env_file | default(true)
+
 # Extraer información de repositorios desde la definición de servicios
 - name: Extraer información de repositorios desde servicios
   set_fact:
@@ -38,139 +51,174 @@
     - provision
     - clone
 
-# Clonar o actualizar repositorios
-- name: Procesar repositorios de servicios
-  block:
-    # Verificar si el repositorio ya existe
-    - name: Verificar si el repositorio ya está clonado
-      stat:
-        path: "{{ project_root }}/{{ item.name }}/.git"
-      register: repo_stat
-      loop: "{{ effective_repos }}"
-      loop_control:
-        label: "{{ item.name }}"
+# --- FLUJO PARA DESPLIEGUE LOCAL (DIINF) ---
+# Si el archivo docker-compose.yml ya existe, asumimos despliegue local
+- name: Descargar imágenes Docker (despliegue local)
+  command: docker pull {{ item.image }}:{{ item.tag | default('latest') }}
+  loop: "{{ services | selectattr('image', 'defined') | list }}"
+  changed_when: true
+  failed_when: false
+  when: docker_compose_exists.stat.exists
+  tags:
+    - provision
+    - docker
 
-    # Mostrar estado de los repositorios (para depuración)
-    - name: Mostrar estado de los repositorios
+# --- FLUJO PARA DESPLIEGUE EN NUBE O NUEVO DESPLIEGUE ---
+# Clonar o actualizar repositorios cuando no existe docker-compose.yml
+- block:
+    # Clonar o actualizar repositorios
+    - name: Procesar repositorios de servicios
+      block:
+        # Verificar si el repositorio ya existe
+        - name: Verificar si el repositorio ya está clonado
+          stat:
+            path: "{{ project_root }}/{{ item.name }}/.git"
+          register: repo_stat
+          loop: "{{ effective_repos }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        # Mostrar estado de los repositorios (para depuración)
+        - name: Mostrar estado de los repositorios
+          debug:
+            msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
+            verbosity: 1
+          loop: "{{ repo_stat.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+
+        # Clonar repositorio si no existe
+        - name: Clonar repositorios que no existen
+          git:
+            repo: "{{ item.item.url }}"
+            dest: "{{ project_root }}/{{ item.item.name }}"
+            version: "{{ item.item.branch | default('main') }}"
+          when: not item.stat.exists
+          loop: "{{ repo_stat.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+          register: clone_result
+      
+    # Copiar el docker-compose.yml existente
+    - name: Copiar docker-compose.yml existente
+      copy:
+        src: "{{ local_files_dir }}/docker-compose.yml"
+        dest: "{{ project_root }}/docker-compose.yml"
+        owner: "{{ ansible_user_id | default('ubuntu') }}"
+        group: "{{ ansible_user_id | default('ubuntu') }}"
+        mode: '0644'
+      when: local_files_dir is defined
+      tags:
+        - provision
+        - clone
+        - docker
+
+    # Copiar archivos adicionales
+    - name: Copiar archivos adicionales si existen
+      copy:
+        src: "{{ local_files_dir }}/{{ item }}"
+        dest: "{{ project_root }}/{{ item }}"
+        owner: "{{ ansible_user_id | default('ubuntu') }}"
+        group: "{{ ansible_user_id | default('ubuntu') }}"
+        mode: '0644'
+      loop: "{{ additional_files | default([]) }}"
+      ignore_errors: yes  # Continuar si algún archivo no existe
+      when:
+        - additional_files is defined
+        - local_files_dir is defined
+      tags:
+        - provision
+        - clone
+        - docker
+
+    # Creación del archivo .env solo si use_env_file es true
+    - block:
+        - name: Crear archivo .env con rutas locales y variables de entorno
+          copy:
+            dest: "{{ project_root }}/.env"
+            content: |
+              # Variables para las imágenes de servicios
+              {% for service in services %}
+              {% if service.image is defined and service.env_var is defined %}
+              {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
+              {% endif %}
+              {% endfor %}
+              
+              {% if global_env_vars is defined %}
+              # Variables globales
+              {% for key, value in global_env_vars.items() %}
+              {{ key }}={{ value }}
+              {% endfor %}
+              {% endif %}
+              
+              {% for service in services %}
+              {% if service.env_vars is defined %}
+              # Variables específicas por servicio
+              # {{ service.name | capitalize }} Variables
+              {% for key, value in service.env_vars.items() %}
+              {{ key }}={{ value }}
+              {% endfor %}
+              {% endif %}
+              {% endfor %}
+              
+            owner: "{{ ansible_user_id | default('ubuntu') }}"
+            group: "{{ ansible_user_id | default('ubuntu') }}"
+            mode: '0644'
+          tags:
+            - provision
+            - clone
+            - docker
+      when: use_env_file | default(true)
+
+    # Determinar si se requiere reconstruir imágenes
+    - name: Determinar si se requiere build
+      set_fact:
+        repos_updated: >-
+          {{ (clone_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0)
+             or (update_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0) }}
+      tags:
+        - provision
+        - clone
+
+    # Mostrar información sobre si se necesita reconstruir imágenes
+    - name: Información sobre construcción de imágenes
       debug:
-        msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
-        verbosity: 1
-      loop: "{{ repo_stat.results }}"
-      loop_control:
-        label: "{{ item.item.name }}"
+        msg: "{{ 'Se reconstruirán las imágenes debido a cambios en los repositorios' if repos_updated else 'No hay cambios en los repositorios, pero puede forzar la reconstrucción con force_build' }}"
+      tags:
+        - provision
+        - clone
 
-    # Clonar repositorio si no existe
-    - name: Clonar repositorios que no existen
-      git:
-        repo: "{{ item.item.url }}"
-        dest: "{{ project_root }}/{{ item.item.name }}"
-        version: "{{ item.item.branch | default('main') }}"
-      when: not item.stat.exists
-      loop: "{{ repo_stat.results }}"
-      loop_control:
-        label: "{{ item.item.name }}"
-      register: clone_result
-
-# Copiar el docker-compose.yml existente
-- name: Copiar docker-compose.yml existente
-  copy:
-    src: "{{ local_files_dir }}/docker-compose.yml"
-    dest: "{{ project_root }}/docker-compose.yml"
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
-  when: local_files_dir is defined
+    # Construir imágenes si hubo cambios o se fuerza el build
+    - name: Construir imágenes Docker
+      command: docker compose build
+      args:
+        chdir: "{{ project_root }}"
+      when: repos_updated | default(true) or force_build | default(false)
+      tags:
+        - provision
+        - clone
+        - docker
+  
+  # Solo ejecutar este bloque si no es un despliegue local
+  when: not docker_compose_exists.stat.exists
   tags:
     - provision
     - clone
-    - docker
 
-# Copiar archivos adicionales
-- name: Copiar archivos adicionales si existen
-  copy:
-    src: "{{ local_files_dir }}/{{ item }}"
-    dest: "{{ project_root }}/{{ item }}"
-    owner: "{{ ansible_user_id | default('ubuntu') }}"
-    group: "{{ ansible_user_id | default('ubuntu') }}"
-    mode: '0644'
-  loop: "{{ additional_files | default([]) }}"
-  ignore_errors: yes  # Continuar si algún archivo no existe
-  when:
-    - additional_files is defined
-    - local_files_dir is defined
-  tags:
-    - provision
-    - clone
-    - docker
-
-# Crear archivo .env con rutas locales y variables de entorno
-- name: Crear archivo .env con rutas locales
+# --- COMÚN PARA AMBOS FLUJOS ---
+# Crear el archivo .env vacío si use_env_file es false (evita error de Docker)
+- name: Crear .env vacío si use_env_file es false
   copy:
     dest: "{{ project_root }}/.env"
-    content: |
-      # Rutas a los repositorios locales
-      {% for repo in effective_repos %}
-      {{ repo.env_var | default(repo.name | upper + '_PATH') }}={{ project_root }}/{{ repo.name }}
-      {% endfor %}
-      
-      # Variables globales para bases de datos y configuración
-      {% for key, value in global_env_vars.items() %}
-      {{ key }}={{ value }}
-      {% endfor %}
-      
-      # Variables específicas por servicio
-      {% for service in services %}
-      {% if service.env_vars is defined %}
-      # {{ service.name | capitalize }} Variables
-      {% for key, value in service.env_vars.items() %}
-      {{ key }}={{ value }}
-      {% endfor %}
-      {% endif %}
-      {% endfor %}
+    content: ""
     owner: "{{ ansible_user_id | default('ubuntu') }}"
     group: "{{ ansible_user_id | default('ubuntu') }}"
     mode: '0644'
-  when: global_env_vars is defined
-  tags:
-    - provision
-    - clone
-    - docker
+  when: not use_env_file | default(true)
 
-# Determinar si se requiere reconstruir imágenes
-- name: Determinar si se requiere build
-  set_fact:
-    repos_updated: >-
-      {{ (clone_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0)
-         or (update_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0) }}
-  tags:
-    - provision
-    - clone
-
-# Mostrar información sobre si se necesita reconstruir imágenes
-- name: Información sobre construcción de imágenes
-  debug:
-    msg: "{{ 'Se reconstruirán las imágenes debido a cambios en los repositorios' if repos_updated else 'No hay cambios en los repositorios, pero puede forzar la reconstrucción con force_build' }}"
-  tags:
-    - provision
-    - clone
-
-# Construir imágenes si hubo cambios o se fuerza el build
-- name: Construir imágenes Docker
-  command: docker compose build
-  args:
-    chdir: "{{ project_root }}"
-  when: repos_updated | default(true) or force_build | default(false)
-  tags:
-    - provision
-    - clone
-    - docker
-
-# Levantar los contenedores con las imágenes construidas localmente
+# Levantar los contenedores (esto se hace igual en ambos casos)
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
   args:
     chdir: "{{ project_root }}"
   changed_when: true
-  tags:
-    - provision
-    - docker
