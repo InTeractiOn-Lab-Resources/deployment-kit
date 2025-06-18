@@ -47,7 +47,17 @@ server {
     {% if service.type == 'api' and service.api_prefix is defined %}
     # Servicio API: {{ service.name }}
     location /{{ service.api_prefix }}/ {
-        proxy_pass http://localhost:{{ service.port }};
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # Ruta sin barra final (exact match)
+    location = /{{ service.api_prefix }} {
+        proxy_pass http://localhost:{{ service.port }}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -102,7 +112,17 @@ server {
     {% if service.type == 'api' and service.api_prefix is defined %}
     # Servicio API: {{ service.name }}
     location /{{ service.api_prefix }}/ {
-        proxy_pass http://localhost:{{ service.port }};
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # Ruta sin barra final (exact match)
+    location = /{{ service.api_prefix }} {
+        proxy_pass http://localhost:{{ service.port }}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
