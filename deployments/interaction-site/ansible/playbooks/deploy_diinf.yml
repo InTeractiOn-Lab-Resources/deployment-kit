@@ -17,7 +17,7 @@
     project_root: "{{ playbook_dir | dirname | dirname }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
-    clone_repos: true
+    clone_repos: false
     force_build: true
 
     # Ruta a docker-compose.yml y .env
@@ -46,23 +46,6 @@
         type: "frontend"
         port: 9090
         # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
-
-    # Repositorios para clonar
-    service_repos:
-      - name: "interaction-backend"
-        url: "https://github.com/InTeractiOn-Sites/interaction-backend.git"
-        branch: "master"
-        service: "backend"
-      
-      - name: "interaction-spa"
-        url: "https://github.com/InTeractiOn-Sites/interaction-spa.git"
-        branch: "master"
-        service: "spa"
-      
-      - name: "interaction-dashboard"
-        url: "https://github.com/InTeractiOn-Sites/interaction-dashboard.git"
-        branch: "master"
-        service: "dashboard"
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
@@ -82,10 +65,10 @@
     use_trailing_slash: false
     
     # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
-    enable_ssl: false
-    #admin_email: "carolina.antillanca@usach.cl"
-    #ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-    #ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    enable_ssl: true
+    admin_email: "carolina.antillanca@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - firewall
