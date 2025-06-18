@@ -4,14 +4,6 @@
 # Descripción: Instala Python y dependencias necesarias para Docker y gestión de contenedores
 # =====================================
 
-# Limpiar y actualizar el caché de APT (soluciona corrupción de caché)
-- name: Limpiar y actualizar el caché de APT (fix DigitalOcean cache corruption)
-  shell: |
-    rm -f /var/cache/apt/pkgcache.bin /var/cache/apt/srcpkgcache.bin || true
-    apt-get clean
-    apt-get update
-  become: true
-
 # Instalar Python 3
 - name: Asegurar que Python 3 esté instalado
   apt:

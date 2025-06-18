@@ -129,6 +129,16 @@
     not docker_compose_exists.stat.exists
 
 # --- COMÚN PARA AMBOS FLUJOS ---
+# Crear el archivo .env vacío si use_env_file es false (evita error de Docker)
+- name: Crear .env vacío si use_env_file es false
+  copy:
+    dest: "{{ project_root }}/.env"
+    content: ""
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  when: not use_env_file | default(true)
+
 # Levantar los contenedores (esto se hace igual en ambos casos)
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
