@@ -50,7 +50,7 @@
     # CONFIGURACIÓN DE NGINX
     # ---------------------    
     # Nombre del servidor (dominio de la VM o "_" para local)
-    server_name: "_"
+    server_name: "felucia.diinf.usach.cl"
 
     # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
     # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
