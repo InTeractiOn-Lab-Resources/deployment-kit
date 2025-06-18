@@ -151,11 +151,9 @@
           copy:
             dest: "{{ project_root }}/.env"
             content: |
-              # Variables para las imágenes de servicios
-              {% for service in services %}
-              {% if service.image is defined and service.env_var is defined %}
-              {{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
-              {% endif %}
+              # Rutas a los repositorios locales
+              {% for repo in effective_repos %}
+              {{ repo.env_var | default(repo.name | upper + '_PATH') }}={{ project_root }}/{{ repo.name }}
               {% endfor %}
               
               {% if global_env_vars is defined %}
