@@ -48,17 +48,17 @@
         # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
 
     service_repos:
-      - name: "backend"
+      - name: "interaction-backend"
         url: "https://github.com/InTeractiOn-Sites/interaction-backend.git"
         branch: "master"
         service: "backend"
       
-      - name: "spa"
+      - name: "interaction-spa"
         url: "https://github.com/InTeractiOn-Sites/interaction-spa.git"
         branch: "master"
         service: "spa"
       
-      - name: "dashboard"
+      - name: "interaction-dashboard"
         url: "https://github.com/InTeractiOn-Sites/interaction-dashboard.git"
         branch: "master"
         service: "dashboard"
