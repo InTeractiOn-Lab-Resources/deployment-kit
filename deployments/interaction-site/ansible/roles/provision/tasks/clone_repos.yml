@@ -51,54 +51,46 @@
     - provision
     - clone
 
-# --- FLUJO PARA DESPLIEGUE LOCAL (DIINF) ---
-# Si el archivo docker-compose.yml ya existe, asumimos despliegue local
-- name: Descargar imágenes Docker (despliegue local)
-  command: docker pull {{ item.image }}:{{ item.tag | default('latest') }}
-  loop: "{{ services | selectattr('image', 'defined') | list }}"
-  changed_when: true
-  failed_when: false
-  when: docker_compose_exists.stat.exists
+# --- COMÚN PARA AMBOS FLUJOS: CLONAR REPOSITORIOS ---
+# Clonar o actualizar repositorios (siempre, independientemente del tipo de despliegue)
+- name: Procesar repositorios de servicios
+  block:
+    # Verificar si el repositorio ya existe
+    - name: Verificar si el repositorio ya está clonado
+      stat:
+        path: "{{ project_root }}/{{ item.name }}/.git"
+      register: repo_stat
+      loop: "{{ effective_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # Mostrar estado de los repositorios (para depuración)
+    - name: Mostrar estado de los repositorios
+      debug:
+        msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
+        verbosity: 1
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    # Clonar repositorio si no existe
+    - name: Clonar repositorios que no existen
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: "{{ item.item.branch | default('main') }}"
+      when: not item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      register: clone_result
   tags:
     - provision
-    - docker
+    - clone
 
-# --- FLUJO PARA DESPLIEGUE EN NUBE O NUEVO DESPLIEGUE ---
-# Clonar o actualizar repositorios cuando no existe docker-compose.yml
+# --- SOLO PARA DESPLIEGUE EN NUBE: COPIAR ARCHIVOS ---
+# Estas tareas solo se ejecutan en el flujo de despliegue en nube
 - block:
-    # Clonar o actualizar repositorios
-    - name: Procesar repositorios de servicios
-      block:
-        # Verificar si el repositorio ya existe
-        - name: Verificar si el repositorio ya está clonado
-          stat:
-            path: "{{ project_root }}/{{ item.name }}/.git"
-          register: repo_stat
-          loop: "{{ effective_repos }}"
-          loop_control:
-            label: "{{ item.name }}"
-
-        # Mostrar estado de los repositorios (para depuración)
-        - name: Mostrar estado de los repositorios
-          debug:
-            msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
-            verbosity: 1
-          loop: "{{ repo_stat.results }}"
-          loop_control:
-            label: "{{ item.item.name }}"
-
-        # Clonar repositorio si no existe
-        - name: Clonar repositorios que no existen
-          git:
-            repo: "{{ item.item.url }}"
-            dest: "{{ project_root }}/{{ item.item.name }}"
-            version: "{{ item.item.branch | default('main') }}"
-          when: not item.stat.exists
-          loop: "{{ repo_stat.results }}"
-          loop_control:
-            label: "{{ item.item.name }}"
-          register: clone_result
-      
     # Copiar el docker-compose.yml existente
     - name: Copiar docker-compose.yml existente
       copy:
@@ -167,43 +159,25 @@
             - clone
             - docker
       when: use_env_file | default(true)
-
-    # Determinar si se requiere reconstruir imágenes
-    - name: Determinar si se requiere build
-      set_fact:
-        repos_updated: >-
-          {{ (clone_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0)
-             or (update_result.results | default([]) | selectattr('changed', 'equalto', true) | list | length > 0) }}
-      tags:
-        - provision
-        - clone
-
-    # Mostrar información sobre si se necesita reconstruir imágenes
-    - name: Información sobre construcción de imágenes
-      debug:
-        msg: "{{ 'Se reconstruirán las imágenes debido a cambios en los repositorios' if repos_updated else 'No hay cambios en los repositorios, pero puede forzar la reconstrucción con force_build' }}"
-      tags:
-        - provision
-        - clone
-
-    # Construir imágenes si hubo cambios o se fuerza el build
-    - name: Construir imágenes Docker
-      command: docker compose build
-      args:
-        chdir: "{{ project_root }}"
-      when: repos_updated | default(true) or force_build | default(false)
-      tags:
-        - provision
-        - clone
-        - docker
   
-  # Solo ejecutar este bloque si no es un despliegue local
+  # Solo ejecutar este bloque si es un despliegue en nube (no existe docker-compose.yml)
   when: not docker_compose_exists.stat.exists
   tags:
     - provision
     - clone
 
-# --- COMÚN PARA AMBOS FLUJOS ---
+# --- COMÚN PARA AMBOS FLUJOS: CONSTRUIR IMÁGENES Y LEVANTAR CONTENEDORES ---
+# Construir imágenes si hubo cambios o se fuerza el build
+- name: Construir imágenes Docker
+  command: docker compose build
+  args:
+    chdir: "{{ project_root }}"
+  when: clone_result.changed | default(false) or force_build | default(false)
+  tags:
+    - provision
+    - clone
+    - docker
+
 # Crear el archivo .env vacío si use_env_file es false (evita error de Docker)
 - name: Crear .env vacío si use_env_file es false
   copy:
@@ -214,7 +188,7 @@
     mode: '0644'
   when: not use_env_file | default(true)
 
-# Levantar los contenedores (esto se hace igual en ambos casos)
+# Levantar los contenedores
 - name: Levantar contenedores con Docker Compose
   command: docker compose up -d
   args:
