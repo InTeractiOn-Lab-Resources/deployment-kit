@@ -1,0 +1,114 @@
+{% for site in nginx_sites %}
+# CONFIGURACIÓN PARA EL DOMINIO: {{ site.server_name }}
+server {
+    listen 80;
+    server_name {{ site.server_name }};
+
+    {% if enable_ssl | default(false) %}
+    # Redirigir HTTP a HTTPS
+    return 301 https://$host$request_uri;
+    {% else %}
+    # Configuración para HTTP (sin SSL)
+    
+    # Frontend para este dominio
+    {% for service_ref in site.services %}
+    {% set service = services | selectattr('name', 'equalto', service_ref.name) | first %}
+    {% if service.type == 'frontend' and service.frontend_prefix is defined %}
+    {% if service.frontend_prefix == '/' %}
+    location / {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% else %}
+    location /{{ service.frontend_prefix }}/ {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endif %}
+    
+    # API endpoints para este dominio
+    {% if service.type == 'api' and service.api_prefix is defined %}
+    location /{{ service.api_prefix }}/ {
+        {% if use_trailing_slash | default(true) %}
+        proxy_pass http://localhost:{{ service.port }}/;
+        {% else %}
+        proxy_pass http://localhost:{{ service.port }};
+        {% endif %}
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+}
+
+{% if enable_ssl | default(false) %}
+# CONFIGURACIÓN HTTPS PARA EL DOMINIO: {{ site.server_name }}
+server {
+    listen 443 ssl;
+    server_name {{ site.server_name }};
+
+    # Configuración de SSL
+    ssl_certificate /etc/letsencrypt/live/{{ site.server_name }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ site.server_name }}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+
+    # Frontend para este dominio
+    {% for service_ref in site.services %}
+    {% set service = services | selectattr('name', 'equalto', service_ref.name) | first %}
+    {% if service.type == 'frontend' and service.frontend_prefix is defined %}
+    {% if service.frontend_prefix == '/' %}
+    location / {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% else %}
+    location /{{ service.frontend_prefix }}/ {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endif %}
+    
+    # API endpoints para este dominio
+    {% if service.type == 'api' and service.api_prefix is defined %}
+    location /{{ service.api_prefix }}/ {
+        {% if use_trailing_slash | default(true) %}
+        proxy_pass http://localhost:{{ service.port }}/;
+        {% else %}
+        proxy_pass http://localhost:{{ service.port }};
+        {% endif %}
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endfor %}
+}
+{% endif %}
+
+{% endfor %}
