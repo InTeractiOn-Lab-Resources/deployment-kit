@@ -5,8 +5,8 @@
 # =====================================
 
 # Variables requeridas en el playbook:
-# - server_name: Nombre del dominio para el certificado
-# - admin_email: Email de administrador para notificaciones
+# - server_name: Nombre del dominio para el certificado (modo normal)
+# - nginx_sites: Lista de sitios con server_name (modo multi-dominio)
 
 # Instalar Certbot y plugins de Nginx
 - name: Instalar Certbot y plugins para Nginx
@@ -18,54 +18,105 @@
     update_cache: yes
   become: true
 
-# Verificar si el certificado ya existe
-- name: Verificar si el certificado ya existe
-  stat:
-    path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-  register: cert_exists
-  become: true
+# --- MODO NORMAL (un solo dominio) ---
+- block:
+  # Verificar si el certificado ya existe
+  - name: Verificar si el certificado ya existe
+    stat:
+      path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    register: cert_exists
+    become: true
 
-# Detener Nginx para liberar el puerto 80
-- name: Detener Nginx temporalmente
-  service:
-    name: nginx
-    state: stopped
-  when:
-    - enable_ssl | default(false)
-    - not cert_exists.stat.exists
-    - server_name != "_"
-    - server_name != "localhost"
-  become: true
+  # Detener Nginx para liberar el puerto 80
+  - name: Detener Nginx temporalmente
+    service:
+      name: nginx
+      state: stopped
+    when:
+      - not cert_exists.stat.exists
+      - server_name != "_"
+      - server_name != "localhost"
+    become: true
 
-# Obtener el certificado usando Certbot en modo standalone
-- name: Obtener certificado SSL con Certbot (Standalone)
-  command: >
-    certbot certonly --standalone 
-    -d {{ server_name }}
-    --agree-tos
-    --non-interactive
-    --email {{ admin_email | default('admin@example.com') }}
+  # Obtener el certificado usando Certbot en modo standalone
+  - name: Obtener certificado SSL con Certbot (Standalone)
+    command: >
+      certbot certonly --standalone 
+      -d {{ server_name }}
+      --agree-tos
+      --non-interactive
+      --email {{ admin_email | default('admin@example.com') }}
+    when: 
+      - not cert_exists.stat.exists
+      - server_name != "_"
+      - server_name != "localhost"
+    become: true
+    register: certbot_result
+    failed_when: certbot_result.rc != 0
+    changed_when: "'Congratulations' in certbot_result.stdout"
+
+  # Iniciar Nginx nuevamente
+  - name: Iniciar Nginx nuevamente
+    service:
+      name: nginx
+      state: started
+    when:
+      - not cert_exists.stat.exists
+      - server_name != "_"
+      - server_name != "localhost"
+    become: true
+  
   when: 
-    - enable_ssl | default(false) 
-    - not cert_exists.stat.exists
-    - server_name != "_"
-    - server_name != "localhost"
-  become: true
-  register: certbot_result
-  failed_when: certbot_result.rc != 0
-  changed_when: "'Congratulations' in certbot_result.stdout"
-
-# Iniciar Nginx nuevamente
-- name: Iniciar Nginx nuevamente
-  service:
-    name: nginx
-    state: started
-  when:
     - enable_ssl | default(false)
-    - not cert_exists.stat.exists
-    - server_name != "_"
-    - server_name != "localhost"
-  become: true
+    - not nginx_multi_site | default(false)
+
+# --- MODO MULTI-DOMINIO (múltiples certificados) ---
+- block:
+  # Verificar certificados existentes para cada dominio
+  - name: Verificar certificados existentes para cada dominio
+    stat:
+      path: "/etc/letsencrypt/live/{{ item.server_name }}/fullchain.pem"
+    register: multi_cert_exists
+    with_items: "{{ nginx_sites }}"
+    become: true
+
+  # Detener Nginx para liberar el puerto 80
+  - name: Detener Nginx temporalmente (multi-dominio)
+    service:
+      name: nginx
+      state: stopped
+    become: true
+    when: multi_cert_exists.results | map(attribute='stat.exists') | select('equalto', false) | list | length > 0
+
+  # Obtener certificados para cada dominio que no tenga uno
+  - name: Obtener certificados SSL para cada dominio
+    command: >
+      certbot certonly --standalone 
+      -d {{ item.item.server_name }}
+      --agree-tos
+      --non-interactive
+      --email {{ admin_email | default('admin@example.com') }}
+    loop: "{{ multi_cert_exists.results }}"
+    loop_control:
+      label: "{{ item.item.server_name }}"
+    when: not item.stat.exists
+    become: true
+    register: multi_certbot_result
+    failed_when: multi_certbot_result.rc is defined and multi_certbot_result.rc != 0
+    changed_when: multi_certbot_result.stdout is defined and 'Congratulations' in multi_certbot_result.stdout
+
+  # Iniciar Nginx nuevamente
+  - name: Iniciar Nginx nuevamente (multi-dominio)
+    service:
+      name: nginx
+      state: started
+    become: true
+    when: multi_cert_exists.results | map(attribute='stat.exists') | select('equalto', false) | list | length > 0
+
+  when: 
+    - enable_ssl | default(false)
+    - nginx_multi_site | default(false)
+    - nginx_sites is defined and nginx_sites | length > 0
 
 # Configurar renovación automática
 - name: Configurar renovación automática de certificados

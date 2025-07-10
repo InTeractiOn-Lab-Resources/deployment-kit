@@ -45,7 +45,7 @@
       - name: "dashboard"
         type: "frontend"
         port: 9090
-        # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
+        frontend_prefix: "/"
 
     service_repos:
       - name: "interaction-backend"
@@ -63,10 +63,22 @@
         branch: "master"
         service: "dashboard"
     
-    # CONFIGURACIÓN DE NGINX
+    # CONFIGURACIÓN DE NGINX MULTI-DOMINIO
     # ---------------------    
-    # Nombre del servidor (dominio de la VM o "_" para local)
-    server_name: "felucia.diinf.usach.cl"
+    # Activar configuración multi-dominio
+    nginx_multi_site: true
+
+    # Definición de dominios y servicios por dominio
+    nginx_sites:
+      - server_name: "felucia.diinf.usach.cl"
+        services:
+          - name: "backend"
+          - name: "spa"
+
+      - server_name: "interaction-dashboard.diinf.usach.cl"
+        services:
+          - name: "backend"
+          - name: "dashboard"
 
     # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
     # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
@@ -83,8 +95,6 @@
     # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
     enable_ssl: true
     admin_email: "carolina.antillanca@usach.cl"
-    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
-    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
   roles:
     - firewall

@@ -19,19 +19,20 @@
     enabled: true
   become: true
 
-# Encontrar el servicio frontend
+# Encontrar el servicio frontend (para el modo normal)
 - name: Identificar el servicio frontend
   set_fact:
     frontend_service: "{{ (services | selectattr('type', 'equalto', 'frontend') | list)[0] | default({}) }}"
+  when: not nginx_multi_site | default(false)
 
 # Definir puerto del frontend (por compatibilidad)
 - name: Definir puerto del frontend
   set_fact:
     frontend_port: "{{ frontend_service.port | default(3000) }}"
-  when: frontend_service != {}
+  when: frontend_service is defined and frontend_service != {}
 
-# Configurar Nginx como reverse proxy
-- name: Configurar Nginx como reverse proxy
+# Configurar Nginx como reverse proxy (modo normal)
+- name: Configurar Nginx como reverse proxy (modo normal)
   template:
     src: "nginx_config.j2"
     dest: "/etc/nginx/sites-available/{{ project_name | default('app') }}.conf"
@@ -40,6 +41,19 @@
     mode: '0644'
   become: true
   notify: Reiniciar Nginx
+  when: not nginx_multi_site | default(false)
+
+# Configurar Nginx como reverse proxy (modo multi-dominio)
+- name: Configurar Nginx como reverse proxy (modo multi-dominio)
+  template:
+    src: "nginx_multi_domain.j2"
+    dest: "/etc/nginx/sites-available/{{ project_name | default('app') }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Reiniciar Nginx
+  when: nginx_multi_site | default(false)
 
 # Habilitar la configuración
 - name: Habilitar configuración en sites-enabled
