@@ -160,7 +160,7 @@ jobs:
 
       # Paso 6: Guardar métricas como artefacto
       - name: Upload Metrics Log as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: metrics-log
           path: metrics.log
