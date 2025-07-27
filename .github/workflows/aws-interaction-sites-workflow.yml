@@ -10,7 +10,7 @@ on:
       deployment_dir:
         description: 'Directorio principal de despliegue'
         required: true
-        default: 'deployments/interaction-sites'
+        default: 'deployments/interaction-site'
 
 jobs:
   # TRABAJO 1: CREAR INFRAESTRUCTURA CON TERRAFORM
