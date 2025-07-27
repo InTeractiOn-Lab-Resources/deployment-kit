@@ -1,8 +1,7 @@
 services:
   backend:
     container_name: interaction-backend
-    build:
-      context: ./interaction-backend
+    image: thecariah/interaction-backend:latest
     ports:
       - "3000:3000"
     env_file:
@@ -14,8 +13,7 @@ services:
 
   dashboard:
     container_name: interaction-dashboard
-    build:
-      context: ./interaction-dashboard
+    image: thecariah/interaction-dashboard:latest
     ports:
       - "9090:9090"
     env_file:
@@ -25,8 +23,7 @@ services:
 
   spa:
     container_name: interaction-spa
-    build:
-      context: ./interaction-spa
+    image: thecariah/interaction-spa:latest
     ports:
       - "8080:8080"
     env_file:
@@ -43,7 +40,7 @@ services:
       - mongo_data:/data/db
     networks:
       - interaction-network
-  
+
 networks:
   interaction-network:
     driver: bridge
