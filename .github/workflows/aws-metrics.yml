@@ -78,13 +78,9 @@ jobs:
       ANSIBLE_ROLES_PATH: roles
 
     steps:
-      # Paso 1: Instalar Ansible
-      - name: Install Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
-
       # Instalar herramientas de monitoreo
-      - name: Install Monitoring Tools
-        run: sudo apt-get update && sudo apt-get install -y sysstat
+      - name: Install Monitoring Tools and Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible sysstat bc 
 
       # Paso 2: Obtener el código
       - name: Checkout Repository
@@ -118,12 +114,12 @@ jobs:
           mongo_password: ${{ secrets.MONGO_PASSWORD }}
           EOF
 
-          # Monitorear CPU y memoria
-          pidstat -u -r -h -p ALL 1 > pidstat.log &
-          PIDSTAT_PID=$!
-          
           # Monitorear disco antes
           DISK_BEFORE=$(df -m / | tail -n 1 | awk '{print $3}')
+          
+          # Guardar uso de CPU y memoria antes
+          CPU_BEFORE=$(ps -eo pcpu | grep -v '%CPU' | awk '{sum += $1} END {print sum}')
+          MEM_BEFORE=$(free -m | grep 'Mem:' | awk '{print $3}')
           
           # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_cloud.yml \
@@ -133,16 +129,17 @@ jobs:
             --ssh-extra-args "-o StrictHostKeyChecking=no" \
             -e @vars.yml
             
-          # Detener monitoreo de CPU y memoria
-          kill $PIDSTAT_PID
-          
           # Monitorear disco después
           DISK_AFTER=$(df -m / | tail -n 1 | awk '{print $3}')
           DISK_USAGE=$((DISK_AFTER - DISK_BEFORE))
           
-          # Extraer métricas
-          CPU_USAGE=$(awk '/Average/ {print $7}' pidstat.log | tail -n 1)
-          MEM_USAGE=$(awk '/Average/ {print $8}' pidstat.log | tail -n 1)
+          # Guardar uso de CPU y memoria después
+          CPU_AFTER=$(ps -eo pcpu | grep -v '%CPU' | awk '{sum += $1} END {print sum}')
+          MEM_AFTER=$(free -m | grep 'Mem:' | awk '{print $3}')
+          
+          # Calcular diferencias
+          CPU_USAGE=$(echo "$CPU_AFTER - $CPU_BEFORE" | bc)
+          MEM_USAGE=$(echo "$MEM_AFTER - $MEM_BEFORE" | bc)
           
           # Guardar métricas localmente
           mkdir -p ${{ github.workspace }}/metrics
