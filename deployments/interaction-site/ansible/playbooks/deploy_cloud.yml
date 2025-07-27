@@ -42,16 +42,22 @@
     services:
       - name: "backend"
         type: "api"
+        image: "thecariah/interaction-backend"
+        tag: "latest"
         port: 3000
         api_prefix: "api"
       
       - name: "spa"
         type: "frontend"
+        image: "thecariah/interaction-spa"
+        tag: "latest"
         port: 8080
         frontend_prefix: "/"
 
       - name: "dashboard"
         type: "frontend"
+        image: "thecariah/interaction-dashboard"
+        tag: "latest"
         port: 9090
         # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
     
