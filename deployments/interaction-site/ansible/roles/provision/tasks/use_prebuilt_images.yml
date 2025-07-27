@@ -122,9 +122,9 @@
         owner: "{{ ansible_user_id | default('ubuntu') }}"
         group: "{{ ansible_user_id | default('ubuntu') }}"
         mode: '0644'
+    when: use_env_file | default(true)
   
   when: >
-    use_env_file | default(true) and
     local_files_dir is defined and
     not docker_compose_exists.stat.exists
 
