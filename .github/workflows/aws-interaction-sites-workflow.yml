@@ -108,6 +108,7 @@ jobs:
           
           # Variables de base de datos (Modificar según tus secretos)
           # No hay para este proyecto
+          EOF
           
           # Ejecutar Ansible con el archivo de variables
           ansible-playbook playbooks/deploy_cloud.yml \
