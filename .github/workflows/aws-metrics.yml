@@ -144,26 +144,22 @@ jobs:
           CPU_USAGE=$(awk '/Average/ {print $7}' pidstat.log | tail -n 1)
           MEM_USAGE=$(awk '/Average/ {print $8}' pidstat.log | tail -n 1)
           
-          # Guardar métricas
-          echo "CPU Total (%): $CPU_USAGE" >> ~/apicore-gm-client/metrics.log
-          echo "Memoria máxima usada (MB): $MEM_USAGE" >> ~/apicore-gm-client/metrics.log
-          echo "Uso de disco (MB): $DISK_USAGE" >> ~/apicore-gm-client/metrics.log
-       
-      # Transferir métricas al entorno de GitHub Actions
-      - name: Transfer Metrics Log
-        run: |
-          scp -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ needs.create-infrastructure.outputs.instance_ip }}:~/apicore-gm-client/metrics.log .
+          # Guardar métricas localmente
+          mkdir -p ${{ github.workspace }}/metrics
+          echo "CPU Total (%): $CPU_USAGE" > ${{ github.workspace }}/metrics/metrics.log
+          echo "Memoria máxima usada (MB): $MEM_USAGE" >> ${{ github.workspace }}/metrics/metrics.log
+          echo "Uso de disco (MB): $DISK_USAGE" >> ${{ github.workspace }}/metrics/metrics.log
         
       # Mostrar métricas en GitHub Actions
       - name: Show Metrics
-        run: cat metrics.log
+        run: cat ${{ github.workspace }}/metrics/metrics.log
 
       # Paso 6: Guardar métricas como artefacto
       - name: Upload Metrics Log as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: metrics-log
-          path: metrics.log
+          path: ${{ github.workspace }}/metrics/metrics.log
         
       # Paso 5: Eliminar la clave SSH
       - name: Cleanup SSH Key
