@@ -3,7 +3,7 @@
 # PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (Ubuntu)
 # Descripción: Configura una máquina para desplegar una aplicación
 # =====================================
-- name: Despliegue en VMs del DIINF o local
+- name: Despliegue en local
   hosts: local
   become: true
   
@@ -24,7 +24,7 @@
     env_file_path: "{{ project_root }}/.env"
 
     # Determina si el proyecto utiliza un archivo .env para el docker compose
-    use_env_file: false
+    use_env_file: false 
     
     # CONFIGURACIÓN DE SERVICIOS DOCKER
     # ---------------------------------
@@ -44,8 +44,9 @@
       - name: "dashboard"
         type: "frontend"
         port: 9090
-        frontend_prefix: "/"
+        # Sin 'frontend_prefix' se accede directamente por el puerto 9090, no se enruta mediante Nginx
 
+    # Repositorios para clonar
     service_repos:
       - name: "interaction-backend"
         url: "https://github.com/InTeractiOn-Sites/interaction-backend.git"
@@ -62,22 +63,10 @@
         branch: "deploy_diinf"
         service: "dashboard"
     
-    # CONFIGURACIÓN DE NGINX MULTI-DOMINIO
+    # CONFIGURACIÓN DE NGINX
     # ---------------------    
-    # Activar configuración multi-dominio
-    nginx_multi_site: true
-
-    # Definición de dominios y servicios por dominio
-    nginx_sites:
-      - server_name: "felucia.diinf.usach.cl"
-        services:
-          - name: "backend"
-          - name: "spa"
-
-      - server_name: "interaction-dashboard.diinf.usach.cl"
-        services:
-          - name: "backend"
-          - name: "dashboard"
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    server_name: "_"
 
     # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
     # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
@@ -85,8 +74,7 @@
     use_trailing_slash: false
     
     # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
-    enable_ssl: true
-    admin_email: "carolina.antillanca@usach.cl"
+    enable_ssl: false
     
   roles:
     - firewall
