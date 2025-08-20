@@ -74,20 +74,6 @@
       loop_control:
         label: "{{ item.item.name }}"
       register: clone_result
-    
-    # Actualizar repositorio si ya están previamente clonados
-    - name: Actualizar repositorios existentes
-      git:
-        repo: "{{ item.item.url }}"
-        dest: "{{ project_root }}/{{ item.item.name }}"
-        version: "{{ item.item.branch | default('main') }}"
-        update: yes
-        force: yes
-      when: item.stat.exists
-      loop: "{{ repo_stat.results }}"
-      loop_control:
-        label: "{{ item.item.name }}"
-      register: update_result
 
 # Configuración en la nube (GitHub Actions)
 # Este bloque se ejecuta solo si local_files_dir esta definido y si no existe el docker compose
@@ -110,7 +96,7 @@
   command: docker compose build
   args:
     chdir: "{{ project_root }}"
-  when: clone_result.changed | default(false) or update_result.changed | default(false) or force_build | default(false)
+  when: clone_result.changed | default(false) or force_build | default(false)
 
 # Levantar los contenedores
 - name: Levantar contenedores con Docker Compose

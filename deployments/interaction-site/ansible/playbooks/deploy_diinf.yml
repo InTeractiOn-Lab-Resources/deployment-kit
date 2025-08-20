@@ -19,6 +19,9 @@
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
     clone_repos: true
 
+    # Se activa forzar construcción imagenes (ya que se eliminó tarea de actualizar repositorios debido a que son privados)
+    force_build: true
+
     # Ruta a docker-compose.yml y .env
     docker_compose_path: "{{ project_root }}/docker-compose.yml"
     env_file_path: "{{ project_root }}/.env"
