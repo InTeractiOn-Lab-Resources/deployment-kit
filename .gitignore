@@ -1,12 +1,10 @@
-# === GENERAL ===
+# GENERAL
 *.log
 *.tmp
 *.swp
 *.bak
 *.DS_Store
 Thumbs.db
-
-# === ENTORNOS Y CONFIGURACIÓN LOCAL ===
 .env
 .env.*
 !.env.example
@@ -14,7 +12,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# === PYTHON (scripts en Ansible o CI) ===
+# PYTHON 
 __pycache__/
 *.py[cod]
 *.pyo
@@ -23,13 +21,7 @@ __pycache__/
 dist/
 build/
 
-# === DOCKER ===
-**/Dockerfile~
-docker-compose.override.yml
-.docker/
-docker-compose.override.yaml
-
-# === TERRAFORM ===
+# TERRAFORM 
 *.tfstate
 *.tfstate.*
 .terraform/
@@ -39,40 +31,28 @@ docker-compose.override.yaml
 terraform.tfvars
 terraform.tfvars.json
 
-# === ANSIBLE ===
+# ANSIBLE
 *.retry
 ansible.cfg~
 .inventory
 .hosts
 
-# === JENKINS ===
-*.jenkinsfile
-jenkins_home/
-*.xml
-
-# === GITHUB ACTIONS ===
+# GITHUB ACTIONS
 secrets.json
 gh-actions-output.log
 
-# === NGINX ===
+# NGINX 
 *.conf~
 nginx/logs/
 nginx/cache/
 
-# === GITBOOK ===
-_book/
-node_modules/
-book.json~
-SUMMARY.md~
-
-# === OTROS ===
+# OTROS
 *.zip
 *.tar
 *.tar.gz
 *.tgz
 
-# === SISTEMAS OPERATIVOS ===
-# macOS
+# MacOS
 .DS_Store
 .AppleDouble
 .LSOverride
