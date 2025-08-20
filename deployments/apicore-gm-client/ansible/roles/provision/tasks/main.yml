@@ -4,28 +4,18 @@
 # Descripción: Orquesta el despliegue de servicios usando Docker
 # =====================================
 
-# Usar imágenes preconstruidas de Docker Hub
+# Usar imágenes preconstruidas de Docker Hub (clone_repos = false)
 - name: Usar imágenes preconstruidas
   include_tasks: use_prebuilt_images.yml
   when: not clone_repos | default(false)
-  tags:
-    - provision
-    - docker
 
-# Clonar repositorios y construir imágenes localmente
+# Clonar repositorios y construir imágenes localmente (clone_repos = true)
 - name: Clonar repositorios y construir imágenes localmente
   include_tasks: clone_repos.yml
   when: clone_repos | default(false)
-  tags:
-    - provision
-    - docker
-    - clone
 
-# Una vez configurada la aplicación, verificar el estado
+# Verificar el estado de los contenedores
 - name: Verificar el estado de los contenedores
   command: docker ps
   register: docker_ps_output
   changed_when: false
-  tags:
-    - provision
-    - status

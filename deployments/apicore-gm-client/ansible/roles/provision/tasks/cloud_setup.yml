@@ -1,0 +1,54 @@
+---
+# =====================================
+# ROL: PROVISION - CLOUD SETUP
+# Descripción: Realiza tareas exclusivamente del entorno cloud (copiar archivos y generar .env)
+# =====================================
+
+# Verificar si existe el archivo docker-compose.yml en el repositorio antes de copiarlo
+- name: Verificar existencia de docker-compose.yml en el repositorio
+  stat:
+    path: "{{ local_files_dir }}/docker-compose.yml"
+  register: docker_compose_stat
+  delegate_to: localhost
+  become: false
+
+# Mostrar información de las rutas de los archivos necesarios
+- name: Mostrar información de rutas
+  debug:
+    msg: 
+      - "Buscando archivos en: {{ local_files_dir }}"
+      - "Archivo docker-compose.yml existe: {{ docker_compose_stat.stat.exists | default('desconocido') }}"
+      - "Workspace root: {{ workspace_root | default('no definido') }}"
+      - "Deployment dir: {{ deployment_dir | default('no definido') }}"
+      - "Servicios definidos: {{ services | length }}"
+      - "Usar archivo .env: {{ use_env_file | default(true) }}"
+
+# Copiar docker-compose desde el repositorio
+- name: Copiar docker-compose.yml desde el repositorio
+  copy:
+    src: "{{ local_files_dir }}/docker-compose.yml"
+    dest: "{{ project_root }}/docker-compose.yml"
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+
+# Copiar archivos adicionales (SQL, configuración, etc.)
+- name: Copiar archivos adicionales si existen
+  copy:
+    src: "{{ local_files_dir }}/{{ item }}"
+    dest: "{{ project_root }}/{{ item }}"
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  loop: "{{ additional_files | default([]) }}"
+  ignore_errors: yes
+
+  # Crear archivo .env usando un template definido
+- name: Crear archivo .env
+  template:
+    src: env_vars.j2
+    dest: "{{ project_root }}/.env"
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  when: use_env_file | default(false)
