@@ -111,10 +111,3 @@
   args:
     chdir: "{{ project_root }}"
   when: clone_result.changed | default(false) or update_result.changed | default(false) or force_build | default(false)
-
-# Levantar los contenedores
-- name: Levantar contenedores con Docker Compose
-  command: docker compose up -d
-  args:
-    chdir: "{{ project_root }}"
-  changed_when: true
