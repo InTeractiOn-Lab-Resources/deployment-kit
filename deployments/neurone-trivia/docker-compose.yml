@@ -52,7 +52,7 @@ services:
   # ========================================
   neurone-core:
     build:
-      context: ../neurone
+      context: ./neurone
       dockerfile: Dockerfile-diinf
     container_name: neurone-core
     ports:
