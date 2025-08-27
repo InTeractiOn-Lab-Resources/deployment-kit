@@ -1,0 +1,50 @@
+---
+- name: Esperar a que todos los servicios estén listos
+  uri:
+    url: "{{ item.url }}"
+    method: GET
+    status_code: 200
+  register: service_check
+  until: service_check.status == 200
+  retries: 30
+  delay: 10
+  with_items:
+    - { name: "NEURONE Core", url: "http://localhost:3000/" }
+    - { name: "NEURONE-GM", url: "http://localhost:3080/" }
+    - { name: "Trivia Client", url: "http://localhost:4200/" }
+  ignore_errors: yes
+
+- name: Esperar a que MongoDB esté listo
+  wait_for:
+    host: localhost
+    port: 27017
+    delay: 5
+    timeout: 300
+
+- name: Configurar usuario administrador
+  include_tasks: setup_admin_user.yml
+
+- name: Configurar gamificación
+  include_tasks: configure_gamification.yml
+
+- name: Mostrar mensaje final de configuración completada
+  debug:
+    msg: |
+      ===========================================
+      CONFIGURACION POST-DESPLIEGUE COMPLETADA 
+      ===========================================
+      
+      Usuario administrador creado:
+      Email: {{ admin_email }}
+      Contraseña: {{ admin_password }}
+      
+      Servicios disponibles:
+        Cliente Trivia: http://localhost:4200
+        NEURONE Core: http://localhost:3000
+        NEURONE-GM: http://localhost:3080
+        Servidor Trivia: http://localhost:3030
+      
+      Gamificacion: ACTIVADA AUTOMATICAMENTE
+      
+      Ahora puedes iniciar sesion con las credenciales de admin.
+      ==========================================

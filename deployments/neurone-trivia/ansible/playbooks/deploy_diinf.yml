@@ -1,0 +1,112 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL
+# Descripción: Configura una máquina para desplegar una aplicación
+#              Despliega clonando los repositorios y construyendo las imágenes localmente.
+# =====================================
+
+- name: Despliegue en VMs del DIINF o local
+  hosts: local
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "Trivia"
+    
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
+    project_root: "{{ playbook_dir | dirname | dirname }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: true
+    force_build: true
+
+    # Ruta a docker-compose.yml y .env (deben ya existir)
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
+    env_file_path: "{{ project_root }}/.env"
+
+    # Determina si el proyecto utiliza un archivo .env para el docker compose
+    use_env_file: true
+    
+    # CONFIGURACIÓN DE SERVICIOS
+    # --------------------------
+    
+    # Definición de servicios
+    services:
+      # NEURONE-Trivia Services
+      - name: "trivia-client"
+        type: "frontend"
+        port: 4200
+        frontend_prefix: "/"
+
+      - name: "trivia-server"
+        type: "api"
+        port: 3030
+        api_prefix: "api"
+
+      # NEURONE-GM Services
+      - name: "gm-client"
+        type: "frontend"
+        port: 4201
+        # Sin frontend_prefix (acceso directo por puerto 4201)
+
+      - name: "gm-server"
+        type: "api"
+        port: 3080
+        api_prefix: "gm-api"
+        
+      # NEURONE-Core Service
+      - name: "neurone-core"
+        type: "api"
+        port: 3000
+        api_prefix: "neurone-api"
+      
+    # Repositorios a clonar
+    service_repos:
+      - name: "game"
+        url: "https://github.com/NEURONE-IL/GAME.git"
+        branch: "deploy-diinf"
+        service: "trivia-server"
+        
+      - name: "neurone-gm"
+        url: "https://github.com/NEURONE-IL/NEURONE-GM.git"
+        branch: "deploy-diinf"
+        service: "gm-server"
+        
+      - name: "neurone"
+        url: "https://github.com/NEURONE-IL/neurone.git"
+        branch: "deploy-diinf"
+        service: "neurone-core"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    server_name: "_"
+
+    # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+    # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+    # false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+    use_trailing_slash: false
+    
+    # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
+    enable_ssl: false
+    #admin_email: "carolina.antillanca@usach.cl"
+    #ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    #ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    
+    # CONFIGURACION POST-DEPLOYMENT (Exclusivo NEURONE Trivia)
+    # ------------------------------
+    # Usuario administrador que se creará automáticamente después del despliegue
+    admin_username: "admin"
+    admin_email: "admin@admin.com"
+    admin_password: "admin123"
+    
+  roles:
+    - firewall
+    - python
+    - docker
+    - { role: ssl, when: "enable_ssl | bool" }
+    - nginx
+    - provision
+    - post-deployment

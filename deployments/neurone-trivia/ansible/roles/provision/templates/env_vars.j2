@@ -1,0 +1,23 @@
+# Variables para las imágenes de servicios
+{% for service in services %}
+{% if service.image is defined and service.env_var is defined %}
+{{ service.env_var | default(service.name | upper + '_IMAGE') }}={{ docker_registry | default('') }}{{ service.image }}:{{ service.tag | default('latest') }}
+{% endif %}
+{% endfor %}
+
+{% if global_env_vars is defined %}
+# Variables globales
+{% for key, value in global_env_vars.items() %}
+{{ key }}={{ value }}
+{% endfor %}
+{% endif %}
+
+{% for service in services %}
+{% if service.env_vars is defined %}
+# Variables específicas por servicio
+# {{ service.name | capitalize }} Variables
+{% for key, value in service.env_vars.items() %}
+{{ key }}={{ value }}
+{% endfor %}
+{% endif %}
+{% endfor %}

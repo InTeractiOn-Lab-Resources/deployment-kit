@@ -1,0 +1,50 @@
+---
+# =====================================
+# ROL: PROVISION - IMÁGENES PRECONSTRUIDAS
+# Descripción: Descarga imágenes Docker preconstruidas y configura el despliegue
+# =====================================
+
+# Crear directorio del proyecto si no existe
+- name: Asegurar que existe el directorio del proyecto
+  file:
+    path: "{{ project_root }}"
+    state: directory
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0755'
+
+# Descargar imágenes Docker para todos los servicios
+- name: Descargar imágenes Docker
+  command: docker pull {{ docker_registry | default('') }}{{ item.image }}:{{ item.tag | default('latest') }}
+  loop: "{{ services | selectattr('image', 'defined') | list }}"
+  changed_when: true
+  failed_when: false
+
+# Verificar entorno de despliegue (si docker compose ya existe es LOCAL, de lo contrario es CLOUD)
+- name: Verificar entorno de despliegue
+  stat:
+    path: "{{ project_root }}/docker-compose.yml"
+  register: docker_compose_exists
+
+# Verificar si el archivo .env ya existe (solo si use_env_file es true)
+- name: Verificar si el archivo .env ya existe
+  stat:
+    path: "{{ project_root }}/.env"
+  register: env_file_exists
+  when: use_env_file | default(false)
+
+# Configuración en la nube (GitHub Actions)
+# Este bloque se ejecuta solo si local_files_dir esta definido y si no existe el docker compose
+- name: Configuración de archivos en la nube
+  import_tasks: cloud_setup.yml
+  when: local_files_dir is defined and not docker_compose_exists.stat.exists
+
+# Crear el archivo .env vacío si use_env_file es false
+- name: Crear .env vacío
+  copy:
+    dest: "{{ project_root }}/.env"
+    content: ""
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  when: not use_env_file | default(false)

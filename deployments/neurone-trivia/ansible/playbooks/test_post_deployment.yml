@@ -1,0 +1,24 @@
+---
+- name: Prueba del rol post-deployment
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    admin_username: "admin"
+    admin_email: "admin@admin.com"
+    admin_password: "admin123"
+  
+  tasks:
+    - name: Verificar que docker-compose esté corriendo
+      shell: docker-compose ps
+      args:
+        chdir: /home/thecariah/projects/uni/trivia-test
+      register: compose_status
+      
+    - name: Mostrar estado de contenedores
+      debug:
+        var: compose_status.stdout_lines
+    
+    - name: Ejecutar configuración post-deployment
+      include_role:
+        name: post-deployment
