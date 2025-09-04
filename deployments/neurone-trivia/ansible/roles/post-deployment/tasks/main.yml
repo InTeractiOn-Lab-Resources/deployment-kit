@@ -27,24 +27,30 @@
 - name: Configurar gamificación
   include_tasks: configure_gamification.yml
 
+- name: Configurar cuestionarios por defecto
+  include_tasks: setup_questionnaires.yml
+
 - name: Mostrar mensaje final de configuración completada
   debug:
-    msg: |
-      ===========================================
-      CONFIGURACION POST-DESPLIEGUE COMPLETADA 
-      ===========================================
-      
-      Usuario administrador creado:
-      Email: {{ admin_email }}
-      Contraseña: {{ admin_password }}
-      
-      Servicios disponibles:
-        Cliente Trivia: http://localhost:4200
-        NEURONE Core: http://localhost:3000
-        NEURONE-GM: http://localhost:3080
-        Servidor Trivia: http://localhost:3030
-      
-      Gamificacion: ACTIVADA AUTOMATICAMENTE
-      
-      Ahora puedes iniciar sesion con las credenciales de admin.
-      ==========================================
+    msg:
+      - "==========================================="
+      - " CONFIGURACIÓN POST-DESPLIEGUE COMPLETADA"
+      - "==========================================="
+      - ""
+      - "Usuario administrador:"
+      - "   Email: {{ admin_email }}"
+      - "   Contraseña: {{ admin_password }}"
+      - ""
+      - "Servicios disponibles:"
+      - "   Cliente Trivia: http://localhost:4200"
+      - "   NEURONE Core: http://localhost:3000"
+      - "   NEURONE-GM: http://localhost:3080"
+      - "   Servidor Trivia: http://localhost:3030"
+      - ""
+      - "Gamificación: ACTIVADA AUTOMÁTICAMENTE"
+      - "Cuestionarios: CONFIGURADOS AUTOMÁTICAMENTE"
+      - "   - Pre-test, Post-test, Post-study listos"
+      - "   - Modificables en: ansible/roles/post-deployment/vars/questionnaires.yml"
+      - ""
+      - " Ahora puedes iniciar sesión con las credenciales de admin"
+      - "==========================================="

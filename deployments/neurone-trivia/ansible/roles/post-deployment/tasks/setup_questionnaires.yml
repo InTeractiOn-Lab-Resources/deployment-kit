@@ -1,0 +1,89 @@
+---
+# Configuración automática de cuestionarios por defecto
+
+- name: Cargar datos de cuestionarios desde archivo
+  include_vars: questionnaires.yml
+
+- name: Obtener token de administrador para crear cuestionarios
+  uri:
+    url: "http://localhost:3030/api/auth/login"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      email: "{{ admin_email }}"
+      password: "{{ admin_password }}"
+    status_code: 200
+  register: admin_login_response
+
+- name: Extraer token de administrador
+  set_fact:
+    admin_token: "{{ admin_login_response.json.token }}"
+
+- name: Verificar cuestionarios existentes
+  uri:
+    url: "http://localhost:3030/api/questionnaire"
+    method: GET
+    headers:
+      x-access-token: "{{ admin_token }}"
+    status_code: 200
+  register: existing_questionnaires
+
+- name: Crear cuestionarios por defecto
+  uri:
+    url: "http://localhost:3030/api/questionnaire"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+      x-access-token: "{{ admin_token }}"
+    body_format: json
+    body:
+      name: "{{ item.name }}"
+      type: "{{ item.type }}"
+      questions: "{{ item.questions }}"
+    status_code: 200
+  register: questionnaire_creation
+  with_items: "{{ questionnaires }}"
+  when: >
+    existing_questionnaires.json.questionnaires | 
+    selectattr('type', 'equalto', item.type) | 
+    list | length == 0
+  ignore_errors: yes
+
+- name: Mostrar resultado de creación de cuestionarios
+  debug:
+    msg: "Cuestionario '{{ item.item.name }}' ({{ item.item.type }}) creado exitosamente"
+  with_items: "{{ questionnaire_creation.results }}"
+  when: 
+    - item is not skipped
+    - item.status == 200
+
+- name: Mostrar cuestionarios omitidos (ya existían)
+  debug:
+    msg: "Cuestionario '{{ item.name }}' ({{ item.type }}) ya existe - omitido"
+  with_items: "{{ questionnaires }}"
+  when: >
+    existing_questionnaires.json.questionnaires | 
+    selectattr('type', 'equalto', item.type) | 
+    list | length > 0
+
+- name: Verificar cuestionarios creados
+  uri:
+    url: "http://localhost:3030/api/questionnaire"
+    method: GET
+    headers:
+      x-access-token: "{{ admin_token }}"
+    status_code: 200
+  register: final_questionnaires_check
+
+- name: Mostrar resumen de cuestionarios disponibles
+  debug:
+    msg:
+      - "==========================================="
+      - " CUESTIONARIOS CONFIGURADOS EXITOSAMENTE"
+      - "==========================================="
+      - "Total de cuestionarios: {{ final_questionnaires_check.json.questionnaires | length }}"
+      - "Tipos disponibles:"
+      - "{% for q in final_questionnaires_check.json.questionnaires %}- {{ q.name }} ({{ q.type }}) - {{ q.questions | length }} preguntas{% endfor %}"
+      - "==========================================="
