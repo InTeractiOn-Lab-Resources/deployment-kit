@@ -31,7 +31,6 @@ services:
     container_name: neurone-gm-client
     ports:
       - "${GM_CLIENT_PORT}:4200"  # Puerto diferente para evitar conflictos
-    command: ["npm", "run", "start", "--", "--host", "0.0.0.0"]
     restart: unless-stopped
 
   gm-server:
