@@ -1,0 +1,152 @@
+---
+- name: Crear usuario administrador en NEURONE-GM
+  uri:
+    url: "http://localhost:3080/auth/gm-signup"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ admin_username }}"
+      password: "{{ admin_password }}"
+      email: "{{ admin_email }}"
+    status_code: [200, 500]  # 500 = usuario ya existe
+  register: gm_user_creation
+  ignore_errors: yes
+
+- name: Mostrar resultado de creación de usuario en NEURONE-GM
+  debug:
+    msg: |
+      Estado Usuario NEURONE-GM: {% if gm_user_creation.status == 200 %}CREADO{% elif gm_user_creation.status == 500 %}YA EXISTIA{% else %}ERROR ({{ gm_user_creation.status | default('N/A') }}){% endif %}
+
+- name: Iniciar sesión en NEURONE-GM para obtener token GM
+  uri:
+    url: "http://localhost:3080/auth/signin"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ admin_username }}"
+      password: "{{ admin_password }}"
+    status_code: [200, 404]
+  register: gm_login_response
+  until: gm_login_response.status == 200 or gm_login_response.status == 404
+  retries: 3
+  delay: 5
+  ignore_errors: yes
+
+- name: Extraer token GM si el login fue exitoso
+  set_fact:
+    gm_token: "{{ gm_login_response.json.data.accessToken }}"
+  when: gm_login_response.status == 200 and gm_login_response.json.data.accessToken is defined
+
+- name: Mostrar estado de inicio de sesión en GM
+  debug:
+    msg: |
+      Inicio de Sesion NEURONE-GM: {% if gm_token is defined %}EXITO{% else %}FALLO{% endif %}
+      Codigo de Estado: {{ gm_login_response.status | default('N/A') }}
+
+- name: Cambiar owner de la aplicación game al usuario admin
+  shell: |
+    docker exec neurone-mongo mongo --username admin --password admin --authenticationDatabase admin --eval "
+    db.getSiblingDB('neuronegm').applications.updateOne(
+      { code: 'game' },
+      { \$set: { owner: '{{ admin_email }}' } }
+    );
+    "
+  register: change_owner_result
+  ignore_errors: yes
+
+- name: Mostrar resultado del cambio de owner
+  debug:
+    var: change_owner_result
+
+- name: Obtener lista de aplicaciones de NEURONE-GM
+  uri:
+    url: "http://localhost:3080/api/applications"
+    method: GET
+    headers:
+      x-access-token: "{{ gm_token }}"
+    status_code: 200
+  register: applications_list
+  when: gm_token is defined
+  ignore_errors: yes
+
+- name: Mostrar lista de aplicaciones
+  debug:
+    var: applications_list.json
+  when: gm_token is defined and applications_list.json is defined
+
+- name: Encontrar ID de la aplicación game
+  set_fact:
+    game_app_id: "{{ item.code }}"
+  loop: "{{ applications_list.json.data }}"
+  when: 
+    - gm_token is defined
+    - applications_list.json is defined
+    - applications_list.json.data is defined
+    - item.name == "game"
+
+- name: Mostrar ID de la aplicación game
+  debug:
+    msg: "ID de Aplicacion Game: {{ game_app_id | default('NO ENCONTRADO') }}"
+
+- name: Activar gamificación para la aplicación game
+  uri:
+    url: "http://localhost:3080/api/applications/{{ game_app_id }}"
+    method: PUT
+    headers:
+      x-access-token: "{{ gm_token }}"
+    body_format: json
+    body:
+      focus: true
+    status_code: 200
+  when: 
+    - gm_token is defined
+    - game_app_id is defined
+  register: gamification_activation
+  ignore_errors: yes
+
+- name: Activar gamificación directamente en la base de datos si la API falla
+  shell: |
+    docker exec neurone-mongo mongo --username admin --password admin --authenticationDatabase admin --eval "
+    db.getSiblingDB('neuronegm').applications.updateOne(
+      { code: 'game' },
+      { \$set: { focus: true } }
+    );
+    "
+  when: 
+    - gm_token is defined
+    - game_app_id is defined
+    - gamification_activation is defined
+    - gamification_activation.status != 200
+  register: db_gamification_activation
+  ignore_errors: yes
+
+- name: Mostrar resultado de activación de gamificación
+  debug:
+    var: gamification_activation
+  when: gm_token is defined
+
+- name: Mostrar estado de configuración de gamificación
+  debug:
+    msg: |
+      Configuracion de Gamificacion: {% if (gamification_activation is defined and gamification_activation.status is defined and gamification_activation.status == 200) or (db_gamification_activation is defined and db_gamification_activation.rc is defined and db_gamification_activation.rc == 0) %}ACTIVADA{% else %}FALLO{% endif %}
+      Token GM: {% if gm_token is defined %}Disponible{% else %}Faltante{% endif %}
+      ID de App: {{ game_app_id | default('No encontrado') }}
+      Metodo usado: {% if gamification_activation is defined and gamification_activation.status == 200 %}API{% elif db_gamification_activation is defined and db_gamification_activation.rc == 0 %}Base de Datos{% else %}Ninguno{% endif %}
+
+- name: Activar gamificación directamente en la base de datos (método de respaldo)
+  shell: |
+    docker exec neurone-mongo mongo --username admin --password admin --authenticationDatabase admin --eval "
+    result = db.getSiblingDB('neuronegm').applications.updateOne(
+      { code: 'game' },
+      { \$set: { focus: true } }
+    );
+    print('Gamificacion activada: ' + (result.modifiedCount > 0 ? 'SI' : 'YA ESTABA ACTIVA'));
+    "
+  when: gm_token is not defined or game_app_id is not defined
+  register: direct_gamification_activation
+  ignore_errors: yes
+
+- name: Mostrar resultado de activación directa
+  debug:
+    var: direct_gamification_activation
+  when: direct_gamification_activation is defined

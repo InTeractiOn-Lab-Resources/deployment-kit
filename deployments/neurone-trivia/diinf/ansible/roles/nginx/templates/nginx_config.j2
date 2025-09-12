@@ -1,0 +1,123 @@
+server {
+    listen 80;
+    {% if server_name == "localhost" or server_name == "_" %}
+    # Configuración para entorno local (sin dominio)
+    server_name _;
+    {% else %}
+    # Configuración para entorno con dominio específico
+    server_name {{ server_name }};
+    
+    # Redirigir HTTP a HTTPS (solo en entornos con dominio)
+    {% if enable_ssl | default(false) %}
+    return 301 https://$host$request_uri;
+    {% endif %}
+    {% endif %}
+
+    # Si no hay SSL o estamos en localhost, configurar proxies aquí
+    {% if not enable_ssl | default(false) or server_name == "localhost" or server_name == "_" %}
+    # Frontend (generado a partir de la definición de servicios)
+    {# Frontends personalizados - SOLO si tienen frontend_prefix definido #}
+    {% for service in services %}
+    {% if service.type == 'frontend' and service.frontend_prefix is defined %}
+    {% if service.frontend_prefix != '/' %}
+    location /{{ service.frontend_prefix }}/ {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% else %}
+    {# Para manejar el caso especial donde frontend_prefix = '/' #}
+    location / {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+    
+    # Rutas API (generadas dinámicamente a partir de los servicios definidos)
+    {% for service in services %}
+    {% if service.type == 'api' and service.api_prefix is defined %}
+    # Servicio API: {{ service.name }}
+    location /{{ service.api_prefix }}/ {
+        {% if use_trailing_slash | default(true) %}
+        proxy_pass http://localhost:{{ service.port }}/;
+        {% else %}
+        proxy_pass http://localhost:{{ service.port }};
+        {% endif %}
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+}
+
+{% if enable_ssl | default(false) and server_name != "localhost" and server_name != "_" %}
+# Servidor HTTPS (solo para entornos con dominio y SSL habilitado)
+server {
+    listen 443 ssl;
+    server_name {{ server_name }};
+
+    # Configuración de SSL
+    ssl_certificate {{ ssl_cert_path | default('/etc/ssl/certs/' + project_name + '.crt') }};
+    ssl_certificate_key {{ ssl_key_path | default('/etc/ssl/private/' + project_name + '.key') }};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+
+    # Frontend - SOLO si tiene frontend_prefix definido
+    {% for service in services %}
+    {% if service.type == 'frontend' and service.frontend_prefix is defined %}
+    {% if service.frontend_prefix == '/' %}
+    location / {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% else %}
+    location /{{ service.frontend_prefix }}/ {
+        proxy_pass http://localhost:{{ service.port }}/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+
+    # Rutas API (generadas dinámicamente)
+    {% for service in services %}
+    {% if service.type == 'api' and service.api_prefix is defined %}
+    # Servicio API: {{ service.name }}
+    location /{{ service.api_prefix }}/ {
+        {% if use_trailing_slash | default(true) %}
+        proxy_pass http://localhost:{{ service.port }}/;
+        {% else %}
+        proxy_pass http://localhost:{{ service.port }};
+        {% endif %}
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    {% endif %}
+    {% endfor %}
+}
+{% endif %}

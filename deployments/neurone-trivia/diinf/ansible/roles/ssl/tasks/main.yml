@@ -1,0 +1,77 @@
+---
+# =====================================
+# ROL: SSL
+# Descripción: Gestiona certificados SSL con Let's Encrypt
+# =====================================
+
+# Variables requeridas en el playbook:
+# - server_name: Nombre del dominio para el certificado
+# - admin_email: Email de administrador para notificaciones
+
+# Instalar Certbot y plugins de Nginx
+- name: Instalar Certbot y plugins para Nginx
+  apt:
+    name: 
+      - certbot
+      - python3-certbot-nginx
+    state: present
+    update_cache: yes
+  become: true
+
+# Verificar si el certificado ya existe
+- name: Verificar si el certificado ya existe
+  stat:
+    path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+  register: cert_exists
+  become: true
+
+# Detener Nginx para liberar el puerto 80
+- name: Detener Nginx temporalmente
+  service:
+    name: nginx
+    state: stopped
+  when:
+    - enable_ssl | default(false)
+    - not cert_exists.stat.exists
+    - server_name != "_"
+    - server_name != "localhost"
+  become: true
+
+# Obtener el certificado usando Certbot en modo standalone
+- name: Obtener certificado SSL con Certbot (Standalone)
+  command: >
+    certbot certonly --standalone 
+    -d {{ server_name }}
+    --agree-tos
+    --non-interactive
+    --email {{ admin_email | default('admin@example.com') }}
+  when: 
+    - enable_ssl | default(false) 
+    - not cert_exists.stat.exists
+    - server_name != "_"
+    - server_name != "localhost"
+  become: true
+  register: certbot_result
+  failed_when: certbot_result.rc != 0
+  changed_when: "'Congratulations' in certbot_result.stdout"
+
+# Iniciar Nginx nuevamente
+- name: Iniciar Nginx nuevamente
+  service:
+    name: nginx
+    state: started
+  when:
+    - enable_ssl | default(false)
+    - not cert_exists.stat.exists
+    - server_name != "_"
+    - server_name != "localhost"
+  become: true
+
+# Configurar renovación automática
+- name: Configurar renovación automática de certificados
+  cron:
+    name: "Let's Encrypt certificate renewal"
+    job: "/usr/bin/certbot renew --quiet --pre-hook 'systemctl stop nginx' --post-hook 'systemctl start nginx'"
+    special_time: daily
+  become: true
+  when: enable_ssl | default(false)

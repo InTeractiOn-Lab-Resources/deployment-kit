@@ -1,0 +1,110 @@
+services:
+  # ========================================
+  # NEURONE-TRIVIA SERVICES
+  # ========================================
+  trivia-client:
+    build:
+      context: ./game/Client
+    container_name: neurone-trivia-client
+    ports:
+      - "${TRIVIA_CLIENT_PORT}:4200"
+
+  trivia-server:
+    build:
+      context: ./game/Server
+    container_name: neurone-trivia-server
+    ports:
+      - "${TRIVIA_SERVER_PORT}:3030"
+    env_file:
+      - ./.env.game
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ========================================
+  # NEURONE-GM SERVICES  
+  # ========================================
+  gm-client:
+    build:
+      context: ./neurone-gm/Client
+    container_name: neurone-gm-client
+    ports:
+      - "${GM_CLIENT_PORT}:4200"  # Puerto diferente para evitar conflictos
+    command: ["npm", "run", "start", "--", "--host", "0.0.0.0"]
+    restart: unless-stopped
+
+  gm-server:
+    build:
+      context: ./neurone-gm/Server
+    container_name: neurone-gm-server
+    ports:
+      - "${GM_SERVER_PORT}:3080"
+    env_file:
+      - ./.env.gm
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ========================================
+  # NEURONE-CORE SERVICES
+  # ========================================
+  neurone-core:
+    build:
+      context: ./neurone
+      dockerfile: Dockerfile-diinf
+    container_name: neurone-core
+    ports:
+      - "${NEURONE_APP_PORT}:3000"
+    env_file:
+      - ./.env.neurone
+    depends_on:
+      mongo:
+        condition: service_healthy
+      neurone-solr:
+        condition: service_healthy
+    volumes:
+      - neurone_assets:/home/neurone/assets
+    restart: unless-stopped
+
+  neurone-solr:
+    image: solr:6
+    container_name: neurone-solr
+    ports:
+      - "${SOLR_PORT}:8983"
+    volumes:
+      - neurone_solr_data:/opt/solr/server/solr/mycores
+    command: solr-precreate neurone
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8983/solr/neurone/admin/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ========================================
+  # MONGODB
+  # ========================================
+  mongo:
+    image: mongo:4.4
+    container_name: neurone-mongo
+    ports:
+      - "${MONGO_EXPOSED_PORT}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--username", "${MONGO_INITDB_ROOT_USERNAME}", "--password", "${MONGO_INITDB_ROOT_PASSWORD}", "--authenticationDatabase", "admin", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  neurone_assets:
+  neurone_solr_data:

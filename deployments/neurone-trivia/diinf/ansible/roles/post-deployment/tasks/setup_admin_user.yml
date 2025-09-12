@@ -1,0 +1,85 @@
+---
+- name: Crear usuario administrador en NEURONE via API
+  uri:
+    url: "http://localhost:3000/api/users"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ admin_username }}"
+      email: "{{ admin_email }}"
+      password: "{{ admin_password }}"
+      profile:
+        firstName: "Admin"
+        lastName: "User"
+        fullName: "Admin User"
+    status_code: [200, 201, 409]  # 409 = usuario ya existe
+  register: neurone_user_creation
+  ignore_errors: yes
+
+- name: Mostrar resultado de creación de usuario en NEURONE
+  debug:
+    msg: |
+      Estado Usuario NEURONE: {% if neurone_user_creation.status == 200 %}CREADO/ACTUALIZADO{% elif neurone_user_creation.status == 409 %}YA EXISTIA{% else %}ERROR ({{ neurone_user_creation.status }}){% endif %}
+
+- name: Registrar usuario administrador en Trivia
+  uri:
+    url: "http://localhost:3030/api/auth/register"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ admin_email }}"
+      password: "{{ admin_password }}"
+      names: "Admin"
+      last_names: "User"
+    status_code: [200, 201, 403]  # 403 = usuario ya existe
+  register: trivia_user_registration
+  ignore_errors: yes
+
+- name: Mostrar resultado de registro de usuario en Trivia
+  debug:
+    msg: |
+      Estado Usuario Trivia: {% if trivia_user_registration.status == 200 %}CREADO{% elif trivia_user_registration.status == 403 %}YA EXISTIA{% else %}ERROR ({{ trivia_user_registration.status | default('N/A') }}){% endif %}
+
+- name: Confirmar email del usuario en MongoDB (establecer confirmed=true)
+  shell: |
+    docker exec neurone-mongo mongo --username admin --password admin --authenticationDatabase admin --eval "
+    db = db.getSiblingDB('neuronegame');
+    db.users.updateOne(
+      { email: '{{ admin_email }}' },
+      { \$set: { confirmed: true } }
+    );
+    "
+  register: email_confirmation
+  ignore_errors: yes
+
+- name: Mostrar resultado de confirmación de email
+  debug:
+    var: email_confirmation
+
+- name: Iniciar sesión para obtener token de autenticación
+  uri:
+    url: "http://localhost:3030/api/auth/login"
+    method: POST
+    body_format: json
+    body:
+      email: "{{ admin_email }}"
+      password: "{{ admin_password }}"
+    status_code: 200
+  register: login_response
+  ignore_errors: yes
+
+- name: Mostrar respuesta de inicio de sesión
+  debug:
+    var: login_response
+
+- name: Extraer token de la respuesta de login
+  set_fact:
+    auth_token: "{{ login_response.json.token }}"
+  when: login_response.status == 200 and login_response.json.token is defined
+
+- name: Mostrar estado de configuración del usuario administrador
+  debug:
+    msg: |
+      Configuracion de Usuario Admin: {% if login_response.status == 200 %}EXITO{% else %}FALLO{% endif %}
+      Email: {{ admin_email }}
+      Puede iniciar sesion: {% if auth_token is defined %}SI{% else %}NO{% endif %}

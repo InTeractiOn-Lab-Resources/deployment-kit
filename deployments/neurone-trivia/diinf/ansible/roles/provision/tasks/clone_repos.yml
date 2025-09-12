@@ -1,0 +1,113 @@
+---
+# =====================================
+# ROL: PROVISION - CLONAR REPOSITORIOS
+# Descripción: Clona repositorios y construye imágenes Docker localmente
+# =====================================
+
+# Crear directorio del proyecto si no existe
+- name: Asegurar que existe el directorio del proyecto
+  file:
+    path: "{{ project_root }}"
+    state: directory
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0755'
+
+# Verificar entorno de despliegue (si docker compose ya existe es LOCAL, de lo contrario es CLOUD)
+- name: Verificar entorno de despliegue
+  stat:
+    path: "{{ project_root }}/docker-compose.yml"
+  register: docker_compose_exists
+  
+# Verificar si el archivo .env ya existe (solo si use_env_file es true)
+- name: Verificar si el archivo .env ya existe
+  stat:
+    path: "{{ project_root }}/.env"
+  register: env_file_exists
+  when: use_env_file | default(false)
+
+# Extraer información de repositorios a clonar (desde service_repos del playbook)
+- name: Extraer información de repositorios a clonar
+  set_fact:
+    effective_repos: "{{ service_repos | default([]) }}"
+
+# Mostrar información de los repositorios que se clonarán
+- name: Mostrar información de los repositorios a clonar
+  debug:
+    msg: "Se procesarán {{ effective_repos | length }} repositorios: {{ effective_repos | map(attribute='name') | list }}"
+
+# Verificar que repositorios hay que clonar
+- name: Verificar que repositorios hay que clonar
+  fail:
+    msg: "No hay repositorios definidos para clonar. Asegúrate de definir service_repos en tu playbook cuando clone_repos es true."
+  when: effective_repos | length == 0
+
+# Clonar o actualizar repositorios
+- name: Procesar repositorios
+  block:
+    # Verificar si el repositorio ya existe
+    - name: Verificar si el repositorio ya está clonado
+      stat:
+        path: "{{ project_root }}/{{ item.name }}/.git"
+      register: repo_stat
+      loop: "{{ effective_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # Mostrar estado de los repositorios
+    - name: Mostrar estado de los repositorios
+      debug:
+        msg: "Repositorio {{ item.item.name }}: {{ 'ya existe' if item.stat.exists else 'no existe' }}"
+        verbosity: 1
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+
+    # Clonar repositorio si no existe
+    - name: Clonar repositorios que no existen
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: "{{ item.item.branch | default('main') }}"
+      when: not item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      register: clone_result
+    
+    # Actualizar repositorio si ya están previamente clonados
+    - name: Actualizar repositorios existentes
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ project_root }}/{{ item.item.name }}"
+        version: "{{ item.item.branch | default('main') }}"
+        update: yes
+        force: yes
+      when: item.stat.exists
+      loop: "{{ repo_stat.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      register: update_result
+
+# Configuración en la nube (GitHub Actions)
+# Este bloque se ejecuta solo si local_files_dir esta definido y si no existe el docker compose
+- name: Configuración de archivos en la nube
+  import_tasks: cloud_setup.yml
+  when: local_files_dir is defined and not docker_compose_exists.stat.exists
+
+# Crear el archivo .env vacío si use_env_file es false
+- name: Crear .env vacío
+  copy:
+    dest: "{{ project_root }}/.env"
+    content: ""
+    owner: "{{ ansible_user_id | default('ubuntu') }}"
+    group: "{{ ansible_user_id | default('ubuntu') }}"
+    mode: '0644'
+  when: not use_env_file | default(false)
+
+# Construir imágenes si hubo cambios o se fuerza el build
+- name: Construir imágenes Docker
+  command: docker compose build
+  args:
+    chdir: "{{ project_root }}"
+  when: clone_result.changed | default(false) or update_result.changed | default(false) or force_build | default(false)

@@ -1,0 +1,37 @@
+---
+# =====================================
+# ROL: PROVISION
+# Descripción: Orquesta el despliegue de servicios usando Docker
+# =====================================
+
+# Usar imágenes preconstruidas de Docker Hub (clone_repos = false)
+- name: Usar imágenes preconstruidas
+  include_tasks: use_prebuilt_images.yml
+  when: not clone_repos | default(false)
+
+# Clonar repositorios y construir imágenes localmente (clone_repos = true)
+- name: Clonar repositorios y construir imágenes localmente
+  include_tasks: clone_repos.yml
+  when: clone_repos | default(false)
+
+# Levantar los contenedores
+- name: Levantar contenedores con Docker Compose
+  command: docker compose up -d
+  args:
+    chdir: "{{ project_root }}"
+  changed_when: true
+
+# Verificar el estado de los contenedores
+- name: Verificar el estado de los contenedores
+  ansible.builtin.command: docker ps
+  register: docker_ps_output
+  changed_when: false
+  failed_when: docker_ps_output.rc != 0
+  become: true
+
+# Mostrar el resultado en la terminal
+- name: Mostrar contenedores en ejecución
+  ansible.builtin.debug:
+    msg: |
+      Resultado de `docker ps`:
+      {{ docker_ps_output.stdout }}

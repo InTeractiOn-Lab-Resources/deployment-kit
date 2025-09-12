@@ -1,0 +1,67 @@
+# =====================================
+# ROL: NGINX
+# Descripción: Instala y configura Nginx como reverse proxy para los microservicios
+# =====================================
+
+# Instalar Nginx
+- name: Instalar Nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: true
+  become: true
+
+# Asegurar que Nginx esté iniciado
+- name: Asegurar que Nginx esté iniciado
+  service:
+    name: nginx
+    state: started
+    enabled: true
+  become: true
+
+# Encontrar el servicio frontend
+- name: Identificar el servicio frontend
+  set_fact:
+    frontend_service: "{{ (services | selectattr('type', 'equalto', 'frontend') | list)[0] | default({}) }}"
+
+# Definir puerto del frontend (por compatibilidad)
+- name: Definir puerto del frontend
+  set_fact:
+    frontend_port: "{{ frontend_service.port | default(3000) }}"
+  when: frontend_service != {}
+
+# Configurar Nginx como reverse proxy
+- name: Configurar Nginx como reverse proxy
+  template:
+    src: "nginx_config.j2"
+    dest: "/etc/nginx/sites-available/{{ project_name | default('app') }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Reiniciar Nginx
+
+# Habilitar la configuración
+- name: Habilitar configuración en sites-enabled
+  file:
+    src: /etc/nginx/sites-available/{{ project_name | default('app') }}.conf
+    dest: /etc/nginx/sites-enabled/{{ project_name | default('app') }}.conf
+    state: link
+  become: true
+  notify: Reiniciar Nginx
+
+# Eliminar configuración default
+- name: Eliminar configuración default de Nginx
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: true
+  notify: Reiniciar Nginx
+
+# Verificar la configuración
+- name: Verificar configuración de Nginx
+  command: nginx -t
+  register: nginx_test
+  changed_when: false
+  failed_when: nginx_test.rc != 0
+  become: true

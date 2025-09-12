@@ -1,0 +1,69 @@
+---
+# Cuestionarios por defecto para el sistema TRIVIA
+# Este archivo puede ser modificado fácilmente para agregar/cambiar preguntas
+
+questionnaires:
+  - name: "Cuestionario Pre-Test"
+    type: "pre-test"
+    questions:
+      - question: "¿Qué tan familiarizado estás con el tema del desafío?"
+        number: 1
+        options:
+          - option: "Nada familiarizado"
+            number: 1
+          - option: "Muy familiarizado"
+            number: 2
+      
+      - question: "¿Qué tan confiado te sientes para completar esta tarea?"
+        number: 2
+        options:
+          - option: "Poco confiado"
+            number: 1
+          - option: "Muy confiado"
+            number: 2
+      
+      - question: "¿Cuánta experiencia tienes en búsqueda de información?"
+        number: 3
+        options:
+          - option: "Muy poca experiencia"
+            number: 1
+          - option: "Mucha experiencia"
+            number: 2
+
+  - name: "Cuestionario Post-Test"
+    type: "post-test"
+    questions:
+      - question: "¿Qué tan difícil fue completar el desafío?"
+        number: 1
+        options:
+          - option: "Muy fácil"
+            number: 1
+          - option: "Muy difícil"
+            number: 2
+      
+      - question: "¿Qué tan satisfecho estás con tu resultado?"
+        number: 2
+        options:
+          - option: "Muy insatisfecho"
+            number: 1
+          - option: "Muy satisfecho"
+            number: 2
+
+  - name: "Cuestionario Post-Estudio"
+    type: "post-study"
+    questions:
+      - question: "¿Cómo evalúas tu experiencia general?"
+        number: 1
+        options:
+          - option: "Muy mala"
+            number: 1
+          - option: "Muy buena"
+            number: 2
+      
+      - question: "¿Recomendarías esta plataforma?"
+        number: 2
+        options:
+          - option: "Definitivamente no"
+            number: 1
+          - option: "Definitivamente sí"
+            number: 2
