@@ -10,8 +10,9 @@
   delay: 10
   with_items:
     - { name: "NEURONE Core", url: "http://localhost:3000/" }
-    - { name: "NEURONE-GM", url: "http://localhost:3080/" }
-    - { name: "Trivia Client", url: "http://localhost:4200/" }
+    - { name: "NEURONE GM Client", url: "http://localhost:4201/" }
+    - { name: "NEURONE GM Server", url: "http://localhost:3080/" }
+    - { name: "NEURONE Trivia Client", url: "http://localhost:4200/" }
   ignore_errors: yes
 
 - name: Esperar a que MongoDB esté listo
@@ -42,15 +43,15 @@
       - "   Contraseña: {{ admin_password }}"
       - ""
       - "Servicios disponibles:"
-      - "   Cliente Trivia: http://localhost:4200"
-      - "   NEURONE Core: http://localhost:3000"
-      - "   NEURONE-GM: http://localhost:3080"
-      - "   Servidor Trivia: http://localhost:3030"
+      - "   NEURONE Trivia: http://localhost:4200 -> Juego principal"
+      - "   NEURONE Core: http://localhost:3000 -> Análisis y documentos"
+      - "   NEURONE GM: http://localhost:4201 -> Panel de Gamificación"
       - ""
       - "Gamificación: ACTIVADA AUTOMÁTICAMENTE"
       - "Cuestionarios: CONFIGURADOS AUTOMÁTICAMENTE"
       - "   - Pre-test, Post-test, Post-study listos"
       - "   - Modificables en: ansible/roles/post-deployment/vars/questionnaires.yml"
       - ""
-      - " Ahora puedes iniciar sesión con las credenciales de admin"
+      - " Ahora puedes iniciar sesión con las credenciales de admin en Trivia y GM."
+      - " Para NEURONE Core, debes registrar un usuario en http://localhost:3000/register "
       - "==========================================="
