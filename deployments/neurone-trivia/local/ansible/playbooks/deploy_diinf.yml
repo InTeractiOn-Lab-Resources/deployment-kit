@@ -66,17 +66,17 @@
     service_repos:
       - name: "game"
         url: "https://github.com/NEURONE-IL/GAME.git"
-        branch: "deploy-diinf"
+        branch: "deploy-local"
         service: "trivia-server"
         
       - name: "neurone-gm"
         url: "https://github.com/NEURONE-IL/NEURONE-GM.git"
-        branch: "deploy-diinf"
+        branch: "deploy-local"
         service: "gm-server"
         
       - name: "neurone"
         url: "https://github.com/NEURONE-IL/neurone.git"
-        branch: "deploy-diinf"
+        branch: "deploy-local"
         service: "neurone-core"
     
     # CONFIGURACIÓN DE NGINX
