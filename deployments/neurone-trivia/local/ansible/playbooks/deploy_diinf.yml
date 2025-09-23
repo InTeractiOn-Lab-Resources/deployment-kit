@@ -1,11 +1,11 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL
-# Descripción: Configura una máquina para desplegar una aplicación
+# PLAYBOOK: DESPLIEGUE LOCAL
+# Descripción: Configura una máquina para desplegar Neurone Trivia localmente
 #              Despliega clonando los repositorios y construyendo las imágenes localmente.
 # =====================================
 
-- name: Despliegue en VMs del DIINF o local
+- name: Despliegue local de Neurone Trivia
   hosts: local
   become: true
   
