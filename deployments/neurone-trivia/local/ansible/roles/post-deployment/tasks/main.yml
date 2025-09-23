@@ -1,27 +1,4 @@
 ---
-- name: Esperar a que todos los servicios estén listos
-  uri:
-    url: "{{ item.url }}"
-    method: GET
-    status_code: 200
-  register: service_check
-  until: service_check.status == 200
-  retries: 30
-  delay: 10
-  with_items:
-    - { name: "NEURONE Core", url: "http://localhost:3000/" }
-    - { name: "NEURONE GM Client", url: "http://localhost:4201/" }
-    - { name: "NEURONE GM Server", url: "http://localhost:3080/" }
-    - { name: "NEURONE Trivia Client", url: "http://localhost:4200/" }
-  ignore_errors: yes
-
-- name: Esperar a que MongoDB esté listo
-  wait_for:
-    host: localhost
-    port: 27017
-    delay: 5
-    timeout: 300
-
 - name: Configurar usuario administrador
   include_tasks: setup_admin_user.yml
 

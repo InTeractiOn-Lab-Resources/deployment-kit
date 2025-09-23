@@ -88,23 +88,7 @@
   debug:
     msg: "ID de Aplicacion Game: {{ game_app_id | default('NO ENCONTRADO') }}"
 
-- name: Activar gamificación para la aplicación game
-  uri:
-    url: "http://localhost:3080/api/applications/{{ game_app_id }}"
-    method: PUT
-    headers:
-      x-access-token: "{{ gm_token }}"
-    body_format: json
-    body:
-      focus: true
-    status_code: 200
-  when: 
-    - gm_token is defined
-    - game_app_id is defined
-  register: gamification_activation
-  ignore_errors: yes
-
-- name: Activar gamificación directamente en la base de datos si la API falla
+- name: Activar gamificación directamente en la base de datos
   shell: |
     docker exec neurone-mongo mongo --username admin --password admin --authenticationDatabase admin --eval "
     db.getSiblingDB('neuronegm').applications.updateOne(

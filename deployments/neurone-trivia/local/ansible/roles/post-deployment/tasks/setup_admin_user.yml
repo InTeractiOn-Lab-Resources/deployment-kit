@@ -1,26 +1,4 @@
 ---
-- name: Crear usuario administrador en NEURONE via API
-  uri:
-    url: "http://localhost:3000/api/users"
-    method: POST
-    body_format: json
-    body:
-      username: "{{ admin_username }}"
-      email: "{{ admin_email }}"
-      password: "{{ admin_password }}"
-      profile:
-        firstName: "Admin"
-        lastName: "User"
-        fullName: "Admin User"
-    status_code: [200, 201, 409]  # 409 = usuario ya existe
-  register: neurone_user_creation
-  ignore_errors: yes
-
-- name: Mostrar resultado de creación de usuario en NEURONE
-  debug:
-    msg: |
-      Estado Usuario NEURONE: {% if neurone_user_creation.status == 200 %}CREADO/ACTUALIZADO{% elif neurone_user_creation.status == 409 %}YA EXISTIA{% else %}ERROR ({{ neurone_user_creation.status }}){% endif %}
-
 - name: Registrar usuario administrador en Trivia
   uri:
     url: "http://localhost:3030/api/auth/register"
