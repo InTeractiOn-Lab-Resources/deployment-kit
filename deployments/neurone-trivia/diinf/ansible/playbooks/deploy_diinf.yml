@@ -1,11 +1,11 @@
 ---
 # =====================================
-# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL
-# Descripción: Configura una máquina para desplegar una aplicación
-#              Despliega clonando los repositorios y construyendo las imágenes localmente.
+# PLAYBOOK: DESPLIEGUE EN VM DIINF PARA PRODUCCIÓN
+# Descripción: Configura una máquina para desplegar Neurone Trivia
+#              Despliega usando imágenes preconstruidas en Docker Hub.
 # =====================================
 
-- name: Despliegue en VMs del DIINF o local
+- name: Despliegue de Neurone Trivia en VM del DIINF
   hosts: local
   become: true
   
@@ -19,8 +19,7 @@
     project_root: "{{ playbook_dir | dirname | dirname }}"
     
     # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
-    clone_repos: true
-    force_build: true
+    clone_repos: false
 
     # Ruta a docker-compose.yml y .env (deben ya existir)
     docker_compose_path: "{{ project_root }}/docker-compose.yml"
@@ -31,53 +30,67 @@
     
     # CONFIGURACIÓN DE SERVICIOS
     # --------------------------
+    # Prefijo común para las imágenes Docker (para Docker Hub dejar vacío)
+    docker_registry: ""
     
     # Definición de servicios
     services:
       # NEURONE-Trivia Services
       - name: "trivia-client"
         type: "frontend"
+        image: "triviainteraction/neurone"
+        tag: "game-client"
         port: 4200
         frontend_prefix: "/"
 
       - name: "trivia-server"
         type: "api"
+        image: "triviainteraction/neurone"
+        tag: "game-server"
         port: 3030
         api_prefix: "api"
 
       # NEURONE-GM Services
       - name: "gm-client"
         type: "frontend"
+        image: "triviainteraction/neurone"
+        tag: "gm-client"
         port: 4201
         # Sin frontend_prefix (acceso directo por puerto 4201)
 
       - name: "gm-server"
         type: "api"
+        image: "triviainteraction/neurone"
+        tag: "gm-server"
         port: 3080
         api_prefix: "gm-api"
         
       # NEURONE-Core Service
       - name: "neurone-core"
         type: "api"
+        image: "triviainteraction/neurone"
+        tag: "core"
         port: 3000
         api_prefix: "neurone-api"
       
-    # Repositorios a clonar
-    service_repos:
-      - name: "game"
-        url: "https://github.com/NEURONE-IL/GAME.git"
-        branch: "deploy-diinf"
-        service: "trivia-server"
-        
-      - name: "neurone-gm"
-        url: "https://github.com/NEURONE-IL/NEURONE-GM.git"
-        branch: "deploy-diinf"
-        service: "gm-server"
-        
-      - name: "neurone"
-        url: "https://github.com/NEURONE-IL/neurone.git"
-        branch: "deploy-diinf"
-        service: "neurone-core"
+    # Clonar y construir directamente en la VM es un proceso lento y propenso a errores.
+    # La VM de Bogano tiene problemas de conexión por lo que se debe usar imágenes preconstruidas.
+
+    # Repositorios a clonar (NO SE USA CON clone_repos: false)
+    #   - name: "game"
+    #     url: "https://github.com/NEURONE-IL/GAME.git"
+    #     branch: "deploy-diinf"
+    #     service: "trivia-server"
+    #     
+    #   - name: "neurone-gm"
+    #     url: "https://github.com/NEURONE-IL/NEURONE-GM.git"
+    #     branch: "deploy-diinf"
+    #     service: "gm-server"
+    #     
+    #   - name: "neurone"
+    #     url: "https://github.com/NEURONE-IL/neurone.git"
+    #     branch: "deploy-diinf"
+    #     service: "neurone-core"
     
     # CONFIGURACIÓN DE NGINX
     # ---------------------    

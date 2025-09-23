@@ -3,15 +3,13 @@ services:
   # NEURONE-TRIVIA SERVICES
   # ========================================
   trivia-client:
-    build:
-      context: ./game/Client
+    image: triviainteraction/neurone:game-client
     container_name: neurone-trivia-client
     ports:
       - "${TRIVIA_CLIENT_PORT}:4200"
 
   trivia-server:
-    build:
-      context: ./game/Server
+    image: triviainteraction/neurone:game-server
     container_name: neurone-trivia-server
     ports:
       - "${TRIVIA_SERVER_PORT}:3030"
@@ -26,16 +24,14 @@ services:
   # NEURONE-GM SERVICES  
   # ========================================
   gm-client:
-    build:
-      context: ./neurone-gm/Client
+    image: triviainteraction/neurone:gm-client
     container_name: neurone-gm-client
     ports:
-      - "${GM_CLIENT_PORT}:4200"  # Puerto diferente para evitar conflictos
+      - "${GM_CLIENT_PORT}:4200"
     restart: unless-stopped
 
   gm-server:
-    build:
-      context: ./neurone-gm/Server
+    image: triviainteraction/neurone:gm-server
     container_name: neurone-gm-server
     ports:
       - "${GM_SERVER_PORT}:3080"
@@ -50,9 +46,7 @@ services:
   # NEURONE-CORE SERVICES
   # ========================================
   neurone-core:
-    build:
-      context: ./neurone
-      dockerfile: Dockerfile-diinf
+    image: triviainteraction/neurone:core
     container_name: neurone-core
     ports:
       - "${NEURONE_APP_PORT}:3000"
