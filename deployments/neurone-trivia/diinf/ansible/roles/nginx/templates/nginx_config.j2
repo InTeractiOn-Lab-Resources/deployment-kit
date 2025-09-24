@@ -69,6 +69,9 @@ server {
     listen 443 ssl;
     server_name {{ server_name }};
 
+    # Límite de tamaño para las solicitudes (para la carga de archivos en neurone trivia)
+    client_max_body_size 50M;
+
     # Configuración de SSL
     ssl_certificate {{ ssl_cert_path | default('/etc/ssl/certs/' + project_name + '.crt') }};
     ssl_certificate_key {{ ssl_key_path | default('/etc/ssl/private/' + project_name + '.key') }};

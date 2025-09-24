@@ -104,16 +104,16 @@
     
     # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
     enable_ssl: true
-    admin_email: "carolina.antillanca@usach.cl"
+    admin_email: "triviainteraction@gmail.com"
     ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
     ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
     
     # CONFIGURACION POST-DEPLOYMENT (Exclusivo NEURONE Trivia)
     # ------------------------------
     # Usuario administrador que se creará automáticamente después del despliegue
-    admin_username: "admin"
-    admin_email: "admin@admin.com"
-    admin_password: "admin123"
+    admin_username: "interaction"
+    admin_email: "triviainteraction@gmail.com"
+    admin_password: "interaction.2025"
     
   roles:
     - firewall

@@ -4,9 +4,9 @@
   connection: local
   gather_facts: no
   vars:
-    admin_username: "admin"
-    admin_email: "admin@admin.com"
-    admin_password: "admin123"
+    admin_username: "interaction"
+    admin_email: "triviainteraction@gmail.com"
+    admin_password: "interaction.2025"
   
   tasks:
     - name: Verificar que docker-compose esté corriendo
