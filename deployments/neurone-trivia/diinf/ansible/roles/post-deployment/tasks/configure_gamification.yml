@@ -115,7 +115,7 @@
       Configuracion de Gamificacion: {% if (gamification_activation is defined and gamification_activation.status is defined and gamification_activation.status == 200) or (db_gamification_activation is defined and db_gamification_activation.rc is defined and db_gamification_activation.rc == 0) %}ACTIVADA{% else %}FALLO{% endif %}
       Token GM: {% if gm_token is defined %}Disponible{% else %}Faltante{% endif %}
       ID de App: {{ game_app_id | default('No encontrado') }}
-      Metodo usado: {% if gamification_activation is defined and gamification_activation.status == 200 %}API{% elif db_gamification_activation is defined and db_gamification_activation.rc == 0 %}Base de Datos{% else %}Ninguno{% endif %}
+      Metodo usado: {% if gamification_activation is defined and gamification_activation.status is defined and gamification_activation.status == 200 %}API{% elif db_gamification_activation is defined and db_gamification_activation.rc is defined and db_gamification_activation.rc == 0 %}Base de Datos{% else %}Ninguno{% endif %}
 
 - name: Activar gamificación directamente en la base de datos (método de respaldo)
   shell: |
