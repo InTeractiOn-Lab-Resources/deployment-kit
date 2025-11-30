@@ -7,6 +7,7 @@ services:
     container_name: neurone-trivia-client
     ports:
       - "${TRIVIA_CLIENT_PORT}:4200"
+    restart: always
 
   trivia-server:
     image: triviainteraction/neurone:game-server
@@ -18,7 +19,7 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   # ========================================
   # NEURONE-GM SERVICES  
@@ -28,7 +29,7 @@ services:
     container_name: neurone-gm-client
     ports:
       - "${GM_CLIENT_PORT}:4200"
-    restart: unless-stopped
+    restart: always
 
   gm-server:
     image: triviainteraction/neurone:gm-server
@@ -40,7 +41,7 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   # ========================================
   # NEURONE-CORE SERVICES
@@ -59,7 +60,7 @@ services:
         condition: service_healthy
     volumes:
       - neurone_assets:/home/neurone/assets
-    restart: unless-stopped
+    restart: always
 
   neurone-solr:
     image: solr:6
@@ -74,7 +75,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    restart: unless-stopped
+    restart: always
 
   # ========================================
   # MONGODB
@@ -95,7 +96,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
+    restart: always
 
 volumes:
   mongo_data:
