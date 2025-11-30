@@ -1,10 +1,24 @@
-# Documentación del Deployment Kit
+---
+icon: hand-wave
+cover: https://gitbookio.github.io/onboarding-template-images/header.png
+coverY: 0
+---
 
-Este directorio (`.gitbook/`) almacena la guía de uso de las plantillas de despliegue desarrolladas en la tesis **“Estandarización del proceso de despliegue para servicios y aplicaciones cloud del Laboratorio InTeractiOn”**.
+# Welcome
 
-La sincronización entre GitBook y GitHub se realiza mediante **Git Sync**, lo que permite mantener esta documentación versionada junto al código fuente y disponible para ser reutilizada o importada en otros espacios de trabajo.
+Bienvenido al **Deployment Kit** del laboratorio InTeractiOn.
 
-GitBook generará automáticamente los archivos Markdown una vez que la integración esté activa.
+Este kit tiene como objetivo principal **estandarizar** el proceso de despliegue de los servicios y aplicaciones cloud del laboratorio.
 
-> Para visualizar la documentación de forma interactiva, se puede acceder mediante:  
-> **https://infra-sandbox.gitbook.io/deployment-kit-docs/**
+Aquí encontrarás instrucciones detalladas sobre cómo utilizar las plantillas proporcionadas para desplegar servicios, empleando tecnologías como **GitHub Actions**, **Docker**, **Terraform y** **Ansible**.
+
+### Proyecto de tesis asociado
+
+Antillanca, C. (2025). _Estandarización del proceso de despliegue para los servicios y aplicaciones cloud del laboratorio InTeractiOn_. Undergraduate Thesis. Departamento de Ingenieria Informatica, Universidad de Santiago de Chile.
+
+### Repositorios relacionados
+
+* [deploymet-kit](https://github.com/infra-sandbox/deployment-kit)
+* [api-core-test](https://github.com/infra-sandbox/api-core-test)
+* [api-gm-test](https://github.com/infra-sandbox/api-gm-test)
+* [client-test](https://github.com/infra-sandbox/client-test)
